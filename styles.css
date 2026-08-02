@@ -1869,3 +1869,7 @@ body {
 .auth-switch-text a:hover {
   text-decoration: underline !important;
 }
+
+.hidden {
+  display: none !important;
+}
