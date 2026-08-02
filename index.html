@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Syncra Planner - Task & Meeting Scheduler</title>
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <!-- Lucide Icons CDN -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- Main Stylesheet -->
+  <link rel="stylesheet" href="styles.css?v=8">
+  <!-- PWA Manifest & Mobile Icons -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#080b12">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="apple-touch-icon" href="icon.svg">
+</head>
+<body>
+  <!-- App Container -->
+  <div class="app-container">
+    
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-brand">
+        <div class="logo-icon">
+          <i data-lucide="clock"></i>
+        </div>
+        <h1>Syncra</h1>
+      </div>
+
+      <!-- Live Clock widget -->
+      <div class="clock-widget">
+        <div class="time-display" id="live-time">14:23</div>
+        <div class="date-display" id="live-date">Thu, July 30, 2026</div>
+      </div>
+
+      <!-- Quick Actions -->
+      <div class="sidebar-actions">
+        <button class="btn btn-primary" id="btn-add-item">
+          <i data-lucide="plus"></i>
+          <span>Schedule New</span>
+        </button>
+      </div>
+
+      <!-- Navigation & View Toggles -->
+      <nav class="sidebar-nav">
+        <div class="nav-section-title">Views</div>
+        <button class="nav-item active" data-view="calendar">
+          <i data-lucide="calendar"></i>
+          <span>Monthly Calendar</span>
+        </button>
+        <button class="nav-item" data-view="timeline">
+          <i data-lucide="calendar-days"></i>
+          <span>Daily Timeline</span>
+        </button>
+
+        <div class="nav-section-title">Filters</div>
+        <button class="nav-item filter-btn active" data-filter="all">
+          <i data-lucide="layers"></i>
+          <span>All Items</span>
+          <span class="badge" id="badge-all">0</span>
+        </button>
+        <button class="nav-item filter-btn" data-filter="tasks">
+          <i data-lucide="check-square"></i>
+          <span>Tasks Only</span>
+          <span class="badge badge-purple" id="badge-tasks">0</span>
+        </button>
+        <button class="nav-item filter-btn" data-filter="meetings">
+          <i data-lucide="video"></i>
+          <span>Meetings Only</span>
+          <span class="badge badge-cyan" id="badge-meetings">0</span>
+        </button>
+        <button class="nav-item filter-btn" data-filter="urgent">
+          <i data-lucide="alert-triangle"></i>
+          <span>High Priority</span>
+          <span class="badge badge-red" id="badge-urgent">0</span>
+        </button>
+      </nav>
+
+      <!-- Analytics Dashboard Mini widget -->
+      <div class="analytics-widget">
+        <div class="widget-header">
+          <h3>Daily Status</h3>
+          <span id="completion-percentage">0%</span>
+        </div>
+        <div class="progress-bar-container">
+          <div class="progress-bar-fill" id="stats-progress-bar" style="width: 0%;"></div>
+        </div>
+        <div class="stats-grid">
+          <div class="stat-box">
+            <span class="stat-val" id="stat-completed">0</span>
+            <span class="stat-lbl">Done</span>
+          </div>
+          <div class="stat-box">
+            <span class="stat-val" id="stat-pending">0</span>
+            <span class="stat-lbl">Pending</span>
+          </div>
+          <div class="stat-box warning">
+            <span class="stat-val" id="stat-delay-risk">0</span>
+            <span class="stat-lbl">Delay Risk</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Backup / Storage -->
+      <div class="sidebar-footer">
+        <button class="footer-btn" id="btn-export" title="Export Schedule Backup">
+          <i data-lucide="download"></i>
+          <span>Backup</span>
+        </button>
+        <button class="footer-btn" id="btn-import" title="Import Schedule Backup">
+          <i data-lucide="upload"></i>
+          <span>Restore</span>
+        </button>
+        <input type="file" id="import-file" style="display: none;" accept=".json">
+      </div>
+
+      <!-- User Profile Badge & Logout -->
+      <div class="sidebar-user-section" id="sidebar-user-panel" style="margin-top: 15px; padding: 10px 14px; background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); border-radius: var(--border-radius-md); display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+        <div style="min-width: 0; display: flex; align-items: center; gap: 8px; flex-grow: 1;">
+          <i data-lucide="user" style="width: 14px; height: 14px; color: var(--color-primary); flex-shrink: 0;"></i>
+          <span id="user-email-display" style="font-size: 11px; color: var(--text-dark); text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">guest@syncra.com</span>
+        </div>
+        <button id="btn-logout" title="Log Out" style="background: transparent; border: none; color: var(--text-dark); cursor: pointer; display: flex; align-items: center; padding: 4px; border-radius: var(--border-radius-sm); transition: color var(--transition-fast);">
+          <i data-lucide="log-out" style="width: 14px; height: 14px;"></i>
+        </button>
+      </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="main-content">
+      
+      <!-- Top Header -->
+      <header class="main-header">
+        <div class="header-left">
+          <h2 id="greeting-title">Hello there!</h2>
+          <p id="header-subtitle">Plan your agenda and stay ahead of the schedule.</p>
+        </div>
+        <div class="header-right">
+          <!-- Notification Status Button -->
+          <button class="header-action-btn" id="btn-toggle-notifications" title="Enable System Notifications">
+            <i data-lucide="bell"></i>
+            <span class="status-indicator warning" id="notification-status-dot"></span>
+          </button>
+          
+          <!-- Calendar Month/Year selector -->
+          <div class="calendar-navigator">
+            <button class="nav-arrow" id="cal-prev" title="Previous Month">
+              <i data-lucide="chevron-left"></i>
+            </button>
+            <span class="current-month-year" id="cal-current-label">July 2026</span>
+            <button class="nav-arrow" id="cal-next" title="Next Month">
+              <i data-lucide="chevron-right"></i>
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <!-- View Containers -->
+      <div class="view-viewport">
+        
+        <!-- Monthly Calendar View -->
+        <section class="view-panel" id="view-calendar">
+          <div class="calendar-grid-header">
+            <div>Sun</div>
+            <div>Mon</div>
+            <div>Tue</div>
+            <div>Wed</div>
+            <div>Thu</div>
+            <div>Fri</div>
+            <div>Sat</div>
+          </div>
+          <div class="calendar-grid-days" id="calendar-days-container">
+            <!-- Days injected via Javascript -->
+          </div>
+        </section>
+
+        <!-- Daily Timeline View (Hidden by default) -->
+        <section class="view-panel hidden" id="view-timeline">
+          <div class="timeline-header">
+            <button class="btn btn-secondary" id="timeline-today-btn">Go to Today</button>
+            <div class="timeline-date-picker">
+              <button class="nav-arrow" id="time-prev"><i data-lucide="chevron-left"></i></button>
+              <span id="timeline-active-date">Thursday, July 30, 2026</span>
+              <button class="nav-arrow" id="time-next"><i data-lucide="chevron-right"></i></button>
+            </div>
+          </div>
+          <div class="timeline-container">
+            <div class="timeline-hours-column" id="timeline-hours">
+              <!-- Hours labeled dynamically (8 AM - 10 PM) -->
+            </div>
+            <div class="timeline-slots-column" id="timeline-slots">
+              <!-- Event slots and indicators injected here -->
+            </div>
+          </div>
+        </section>
+
+      </div>
+
+      <!-- Dashboard Bottom Section: Quick Overdue Alerts & Filtered List -->
+      <section class="bottom-section">
+        <!-- Live Alert Banner (For overdue items) -->
+        <div class="alert-banner hidden" id="delay-alert-banner">
+          <div class="alert-content">
+            <i data-lucide="alert-octagon"></i>
+            <div>
+              <strong>Delay Risk Detected:</strong> <span id="delay-alert-text">You have 2 pending items past their scheduled due time!</span>
+            </div>
+          </div>
+          <button class="alert-resolve-btn" id="btn-focus-overdue">View Items</button>
+        </div>
+
+        <div class="lists-container">
+          <!-- Upcoming Agenda List -->
+          <div class="agenda-list-card">
+            <div class="card-header">
+              <h3 id="agenda-title">Agenda: July 30, 2026</h3>
+              <div class="card-actions">
+                <select id="sort-filter" class="custom-select">
+                  <option value="time">Sort by Time</option>
+                  <option value="priority">Sort by Priority</option>
+                  <option value="status">Sort by Status</option>
+                </select>
+              </div>
+            </div>
+            <div class="agenda-list-items" id="agenda-items-container">
+              <!-- Items loaded via script -->
+              <div class="empty-state">
+                <i data-lucide="calendar-x" class="empty-icon"></i>
+                <p>No items scheduled for this day.</p>
+                <button class="btn btn-sm btn-secondary" id="btn-empty-add">Add Something</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+  </div>
+
+  <!-- Form Modal (Add / Edit Schedule Event) -->
+  <div class="modal-overlay hidden" id="modal-event-form">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h2 id="modal-title">Create Schedule Event</h2>
+        <button class="modal-close" id="modal-form-close"><i data-lucide="x"></i></button>
+      </div>
+      
+      <div class="modal-tabs">
+        <button class="modal-tab active" id="tab-task" data-type="task">
+          <i data-lucide="check-square"></i>
+          <span>Task</span>
+        </button>
+        <button class="modal-tab" id="tab-meeting" data-type="meeting">
+          <i data-lucide="video"></i>
+          <span>Meeting</span>
+        </button>
+      </div>
+
+      <form class="event-form" id="event-creation-form" novalidate>
+        <!-- Hidden Inputs for editing -->
+        <input type="hidden" id="form-item-id" value="">
+        <input type="hidden" id="form-item-type" value="task"> <!-- task or meeting -->
+
+        <div class="form-group span-full">
+          <label for="form-title">Title <span class="required">*</span></label>
+          <input type="text" id="form-title" placeholder="e.g., Weekly Sync or Submit Report" required autocomplete="off">
+          <span class="error-message" id="error-title">Title is required.</span>
+        </div>
+
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="form-date">Date <span class="required">*</span></label>
+            <input type="date" id="form-date" required>
+            <span class="error-message" id="error-date">Date is required.</span>
+          </div>
+
+          <div class="form-group">
+            <label for="form-time-start" id="label-time-start">Time</label>
+            <input type="time" id="form-time-start">
+          </div>
+
+          <!-- Meeting specific: End Time -->
+          <div class="form-group" id="group-time-end">
+            <label for="form-time-end">End Time</label>
+            <input type="time" id="form-time-end">
+            <span class="error-message" id="error-time-end">End time must be after start time.</span>
+          </div>
+
+          <!-- Task specific: Priority -->
+          <div class="form-group" id="group-priority">
+            <label for="form-priority">Priority</label>
+            <select id="form-priority">
+              <option value="low">Low Priority</option>
+              <option value="medium" selected>Medium Priority</option>
+              <option value="high">High Priority</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="form-category">Category</label>
+            <select id="form-category">
+              <option value="work" selected>💼 Work</option>
+              <option value="personal">🏠 Personal</option>
+              <option value="education">🎓 Education</option>
+              <option value="health">❤️ Health & Fitness</option>
+              <option value="other">⭐ Other</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="form-reminder">Reminder Alarm</label>
+            <select id="form-reminder">
+              <option value="none">No reminder</option>
+              <option value="0">At time of event</option>
+              <option value="5">5 minutes before</option>
+              <option value="15">15 minutes before</option>
+              <option value="30">30 minutes before</option>
+              <option value="60">1 hour before</option>
+              <option value="120">2 hours before</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Meeting specific: Link & Location -->
+        <div class="form-group span-full" id="group-meeting-details">
+          <label for="form-meeting-link">Meeting URL / Link</label>
+          <div class="input-with-icon">
+            <i data-lucide="link"></i>
+            <input type="url" id="form-meeting-link" placeholder="https://meet.google.com/abc-defg-hij">
+          </div>
+          <span class="error-message" id="error-link">Please enter a valid URL.</span>
+
+          <label for="form-meeting-location" style="margin-top: 12px;">Physical Location (Optional)</label>
+          <div class="input-with-icon">
+            <i data-lucide="map-pin"></i>
+            <input type="text" id="form-meeting-location" placeholder="Conference Room A, Office">
+          </div>
+        </div>
+
+        <!-- Completion status (Edit Mode only) -->
+        <div class="form-group span-full hidden" id="group-completed" style="align-items: center; gap: 8px; margin-top: 8px;">
+          <input type="checkbox" id="form-completed" style="width:18px; height:18px; cursor:pointer;">
+          <label for="form-completed" style="margin:0; cursor:pointer; font-weight:600;">Mark event as completed</label>
+        </div>
+
+        <!-- Description -->
+        <div class="form-group span-full">
+          <label for="form-description">Description</label>
+          <textarea id="form-description" rows="3" placeholder="Enter details or notes..."></textarea>
+        </div>
+
+        <!-- Task specific: Subtasks List -->
+        <div class="form-group span-full" id="group-subtasks">
+          <label>Subtasks Checklist</label>
+          <div class="subtask-input-row">
+            <input type="text" id="form-new-subtask" placeholder="Add a subtask..." autocomplete="off">
+            <button type="button" class="btn btn-secondary" id="btn-add-subtask">Add</button>
+          </div>
+          <ul class="subtasks-form-list" id="subtasks-form-list-container">
+            <!-- Dynamically populated list -->
+          </ul>
+        </div>
+
+        <div class="modal-footer span-full">
+          <button type="button" class="btn btn-secondary" id="btn-cancel-form">Cancel</button>
+          <button type="button" class="btn btn-danger hidden" id="btn-delete-item">Delete</button>
+          <button type="submit" class="btn btn-primary" id="btn-submit-form">Save Event</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Alarm Alert Fullscreen Overlay -->
+  <div class="alarm-overlay hidden" id="alarm-alert-overlay">
+    <div class="alarm-card">
+      <div class="alarm-bell-icon">
+        <i data-lucide="bell-ring"></i>
+      </div>
+      <h2>REMINER ALARM</h2>
+      <div class="alarm-item-type" id="alarm-item-type">MEETING</div>
+      <div class="alarm-item-title" id="alarm-item-title">Product Alignment Sync</div>
+      <div class="alarm-item-time" id="alarm-item-time">Starts in 5 minutes (15:00)</div>
+      
+      <!-- Action buttons -->
+      <div class="alarm-actions">
+        <button class="btn btn-lg btn-secondary" id="alarm-btn-snooze">
+          <i data-lucide="snooze"></i>
+          <span>Snooze (5m)</span>
+        </button>
+        <button class="btn btn-lg btn-primary" id="alarm-btn-dismiss">
+          <i data-lucide="check"></i>
+          <span>Acknowledge</span>
+        </button>
+      </div>
+      
+      <!-- Optional: Join meeting button -->
+      <a href="#" target="_blank" class="btn btn-lg btn-success hidden" id="alarm-btn-join">
+        <i data-lucide="external-link"></i>
+        <span>Join Meeting Now</span>
+      </a>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container (For quick status updates) -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <!-- Mobile Bottom Navigation Bar -->
+  <nav class="mobile-nav-bar">
+    <button class="mobile-nav-item active" data-view="calendar">
+      <i data-lucide="calendar"></i>
+      <span>Calendar</span>
+    </button>
+    <button class="mobile-nav-item" data-view="timeline">
+      <i data-lucide="calendar-days"></i>
+      <span>Timeline</span>
+    </button>
+    <button class="mobile-nav-item" id="mobile-btn-add">
+      <div class="mobile-add-icon">
+        <i data-lucide="plus"></i>
+      </div>
+    </button>
+    <button class="mobile-nav-item" id="mobile-btn-agenda">
+      <i data-lucide="layers"></i>
+      <span>Agenda</span>
+    </button>
+    <button class="mobile-nav-item" id="mobile-btn-backup">
+      <i data-lucide="download"></i>
+      <span>Backup</span>
+    </button>
+  </nav>
+
+  <!-- Futuristic Glassmorphic Auth Overlay -->
+  <div class="auth-overlay" id="auth-overlay">
+    <div class="auth-card">
+      <div class="auth-logo">
+        <i data-lucide="check-square" style="width:28px; height:28px; color:var(--color-primary);"></i>
+        <span>SYNCRA PLANNER</span>
+      </div>
+      <h2 id="auth-title">Log In to Syncra</h2>
+      <p class="auth-subtitle" id="auth-subtitle">Keep your schedules synced across devices</p>
+      
+      <form id="auth-form">
+        <div class="form-group">
+          <label for="auth-email">Email Address</label>
+          <input type="email" id="auth-email" placeholder="email@example.com" required autocomplete="email">
+        </div>
+        <div class="form-group" style="margin-top: 15px;">
+          <label for="auth-password">Password</label>
+          <input type="password" id="auth-password" placeholder="••••••••" required autocomplete="current-password">
+        </div>
+        
+        <div class="auth-error hidden" id="auth-error-msg">Incorrect email or password.</div>
+        
+        <button type="submit" class="btn btn-primary" id="auth-submit-btn" style="margin-top: 25px; width: 100%;">Log In</button>
+      </form>
+      
+      <div class="auth-switch-text" style="margin-top: 20px; text-align: center; font-size: 13px; color: var(--text-dark);">
+        <span id="auth-switch-prompt">Don't have an account?</span> 
+        <a href="#" id="auth-switch-btn" style="color: var(--color-primary); text-decoration: none; font-weight: 600;">Sign Up</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="app.js?v=8"></script>
+</body>
+</html>
