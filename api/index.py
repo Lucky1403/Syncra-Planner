@@ -56,8 +56,8 @@ if mysql_url:
 
     app.config['SQLALCHEMY_DATABASE_URI'] = mysql_url
 
-    # Configure SSL args if Aiven cloud hostname is detected (Aiven enforces SSL connections)
-    if 'aivencloud.com' in mysql_url:
+    # Configure SSL args if connecting to a remote host (remote hosts like Aiven and TiDB Cloud enforce SSL)
+    if 'localhost' not in mysql_url and '127.0.0.1' not in mysql_url:
         app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
             "connect_args": {
                 "ssl": {"ssl_disabled": False}
