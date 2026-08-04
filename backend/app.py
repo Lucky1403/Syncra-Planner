@@ -35,6 +35,25 @@ if mysql_url:
         else:
             mysql_url = base_url
             
+    # URL encode password to handle special characters (@, :, /, etc.) in password
+    from urllib.parse import urlparse, quote_plus, urlunparse
+    try:
+        parsed = urlparse(mysql_url)
+        if parsed.password:
+            encoded_password = quote_plus(parsed.password)
+            netloc = parsed.username
+            if encoded_password:
+                netloc += f":{encoded_password}"
+            netloc += f"@{parsed.hostname}"
+            if parsed.port:
+                netloc += f":{parsed.port}"
+            
+            parsed_list = list(parsed)
+            parsed_list[1] = netloc
+            mysql_url = urlunparse(parsed_list)
+    except Exception as e:
+        print("Database URL password encoding failed:", e)
+        
     app.config['SQLALCHEMY_DATABASE_URI'] = mysql_url
     
     # Configure SSL args if Aiven cloud hostname is detected (Aiven enforces SSL connections)
