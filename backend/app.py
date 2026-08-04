@@ -47,18 +47,40 @@ if mysql_url:
             }
         }
 else:
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///syncra.db'
+    if os.getenv('VERCEL') == '1':
+        app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:////tmp/syncra.db'
+    else:
+        app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///syncra.db'
 
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
 
-# Auto-create tables if they do not exist
-try:
-    with app.app_context():
-        db.create_all()
-except Exception as e:
-    print("Database initialization failed:", e)
+# Auto-create tables on first request
+_tables_created = False
+
+@app.before_request
+def create_tables():
+    global _tables_created
+    if not _tables_created:
+        try:
+            db.create_all()
+            _tables_created = True
+        except Exception as e:
+            app.logger.error(f"Database table creation failed: {e}")
+
+import traceback
+from werkzeug.exceptions import HTTPException
+
+@app.errorhandler(Exception)
+def handle_exception(e):
+    if isinstance(e, HTTPException):
+        return e
+    tb = traceback.format_exc()
+    print("SERVER ERROR:", tb)
+    return jsonify({
+        "message": f"Server Error: {str(e)}"
+    }), 500
 
 # --- Database Models ---
 
