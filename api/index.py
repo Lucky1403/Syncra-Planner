@@ -23,7 +23,7 @@ if mysql_url:
     # Auto-adjust driver prefix if user pasted raw mysql:// (SQLAlchemy requires driver specification)
     if mysql_url.startswith('mysql://'):
         mysql_url = mysql_url.replace('mysql://', 'mysql+pymysql://', 1)
-        
+
     # Strip ssl-mode parameters from query string to avoid SQLAlchemy/pymysql dialect init crashes
     if '?' in mysql_url:
         parts = mysql_url.split('?', 1)
@@ -34,7 +34,7 @@ if mysql_url:
             mysql_url = base_url + '?' + '&'.join(cleaned_params)
         else:
             mysql_url = base_url
-            
+
     # URL encode password to handle special characters (@, :, /, etc.) in password
     from urllib.parse import urlparse, quote_plus, urlunparse
     try:
@@ -47,20 +47,20 @@ if mysql_url:
             netloc += f"@{parsed.hostname}"
             if parsed.port:
                 netloc += f":{parsed.port}"
-            
+
             parsed_list = list(parsed)
             parsed_list[1] = netloc
             mysql_url = urlunparse(parsed_list)
     except Exception as e:
         print("Database URL password encoding failed:", e)
-        
+
     app.config['SQLALCHEMY_DATABASE_URI'] = mysql_url
-    
+
     # Configure SSL args if Aiven cloud hostname is detected (Aiven enforces SSL connections)
     if 'aivencloud.com' in mysql_url:
         app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
             "connect_args": {
-                "ssl": {}
+                "ssl": {"ssl_disabled": False}
             }
         }
 else:
@@ -73,7 +73,7 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
 
-# Auto-create tables on first request
+# Auto-create tables on first request (lazy, error-handled — safe for serverless cold starts)
 _tables_created = False
 
 @app.before_request
@@ -166,10 +166,6 @@ class Subtask(db.Model):
             'completed': self.completed
         }
 
-# Create tables if they do not exist
-with app.app_context():
-    db.create_all()
-
 # --- Auth Middleware ---
 
 def token_required(f):
@@ -180,10 +176,10 @@ def token_required(f):
             auth_header = request.headers['Authorization']
             if auth_header.startswith('Bearer '):
                 token = auth_header.split(" ")[1]
-        
+
         if not token:
             return jsonify({'message': 'Authorization token is missing!'}), 401
-            
+
         try:
             data = jwt.decode(token, app.config['SECRET_KEY'], algorithms=["HS256"])
             current_user = User.query.filter_by(id=data['user_id']).first()
@@ -193,7 +189,7 @@ def token_required(f):
             return jsonify({'message': 'Token has expired!'}), 401
         except jwt.InvalidTokenError:
             return jsonify({'message': 'Invalid token!'}), 401
-            
+
         return f(current_user, *args, **kwargs)
     return decorated
 
@@ -204,24 +200,24 @@ def signup():
     data = request.get_json()
     if not data or not data.get('email') or not data.get('password'):
         return jsonify({'message': 'Missing email or password'}), 400
-        
+
     email = data['email'].strip().lower()
     password = data['password']
-    
+
     if User.query.filter_by(email=email).first():
         return jsonify({'message': 'User already exists'}), 409
-        
+
     new_user = User(email=email)
     new_user.set_password(password)
     db.session.add(new_user)
     db.session.commit()
-    
+
     # Generate Token
     token = jwt.encode({
         'user_id': new_user.id,
         'exp': datetime.datetime.utcnow() + datetime.timedelta(days=7)
     }, app.config['SECRET_KEY'], algorithm="HS256")
-    
+
     return jsonify({
         'message': 'User created successfully',
         'token': token,
@@ -233,20 +229,20 @@ def login():
     data = request.get_json()
     if not data or not data.get('email') or not data.get('password'):
         return jsonify({'message': 'Missing email or password'}), 400
-        
+
     email = data['email'].strip().lower()
     password = data['password']
-    
+
     user = User.query.filter_by(email=email).first()
     if not user or not user.check_password(password):
         return jsonify({'message': 'Invalid email or password'}), 401
-        
+
     # Generate Token
     token = jwt.encode({
         'user_id': user.id,
         'exp': datetime.datetime.utcnow() + datetime.timedelta(days=7)
     }, app.config['SECRET_KEY'], algorithm="HS256")
-    
+
     return jsonify({
         'message': 'Logged in successfully',
         'token': token,
@@ -265,19 +261,19 @@ def sync_events(current_user):
     data = request.get_json()
     if not data or 'events' not in data:
         return jsonify({'message': 'Events payload is required'}), 400
-        
+
     payload_events = data['events']
     payload_ids = {e['id'] for e in payload_events}
-    
+
     # Fetch existing db items
     db_events = Event.query.filter_by(user_id=current_user.id).all()
     db_ids = {e.id for e in db_events}
-    
+
     # 1. Delete events from database that are not in the payload
     for e in db_events:
         if e.id not in payload_ids:
             db.session.delete(e)
-            
+
     # 2. Insert/Update payload events
     for p_ev in payload_events:
         if p_ev['id'] in db_ids:
@@ -296,7 +292,7 @@ def sync_events(current_user):
             db_ev.dismissedAlarm = p_ev.get('dismissedAlarm', False)
             db_ev.link = p_ev.get('link')
             db_ev.location = p_ev.get('location')
-            
+
             # Re-sync subtasks
             # Delete old db subtasks
             for s in db_ev.subtasks:
@@ -331,7 +327,7 @@ def sync_events(current_user):
                 location=p_ev.get('location')
             )
             db.session.add(new_ev)
-            
+
             if 'subtasks' in p_ev:
                 for p_sub in p_ev['subtasks']:
                     new_sub = Subtask(
@@ -341,7 +337,7 @@ def sync_events(current_user):
                         completed=p_sub.get('completed', False)
                     )
                     db.session.add(new_sub)
-                    
+
     db.session.commit()
     return jsonify({'message': 'Synchronization successful'}), 200
 
