@@ -24,6 +24,17 @@ if mysql_url:
     if mysql_url.startswith('mysql://'):
         mysql_url = mysql_url.replace('mysql://', 'mysql+pymysql://', 1)
         
+    # Strip ssl-mode parameters from query string to avoid SQLAlchemy/pymysql dialect init crashes
+    if '?' in mysql_url:
+        parts = mysql_url.split('?', 1)
+        base_url = parts[0]
+        query_params = parts[1].split('&')
+        cleaned_params = [p for p in query_params if not p.lower().startswith('ssl-mode') and not p.lower().startswith('ssl_mode')]
+        if cleaned_params:
+            mysql_url = base_url + '?' + '&'.join(cleaned_params)
+        else:
+            mysql_url = base_url
+            
     app.config['SQLALCHEMY_DATABASE_URI'] = mysql_url
     
     # Configure SSL args if Aiven cloud hostname is detected (Aiven enforces SSL connections)
@@ -41,6 +52,13 @@ else:
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
+
+# Auto-create tables if they do not exist
+try:
+    with app.app_context():
+        db.create_all()
+except Exception as e:
+    print("Database initialization failed:", e)
 
 # --- Database Models ---
 

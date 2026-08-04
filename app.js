@@ -203,6 +203,11 @@ function init() {
   startAlarmTicker();
   checkNotificationPermissionState();
   
+  // Run Lucide renderer on startup to bind all icons (sidebar, auth logo, etc.)
+  if (window.lucide) {
+    lucide.createIcons();
+  }
+
   // Register service worker for PWA offline support
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
