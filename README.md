@@ -22,23 +22,23 @@ Syncra is a premium, high-end, full-stack Progressive Web App (PWA) designed to 
     *   **Web Audio API Oscillator Chimes**: Plays digital chimes directly in your browser. Zero external audio file dependencies.
     *   **Desktop & Mobile Notifications**: Integrated browser alerts with click-to-focus triggers.
     *   **Prior Reminders**: Configure alerts to fire on time, or 5m, 15m, 30m, 1h, or 2h prior to events.
-*   **Offline Support & Backups**: Serves cached assets using a background Service Worker for offline operations. Export schedule data as a `.json` backup file or restore it instantly.
+*   **Offline Support & Backups**: Serves cached assets using a background Service Worker and stores pending sync snapshots in IndexedDB so changes survive app closure. Export schedule data as a `.json` backup file or restore it instantly.
+*   **Conflict-Safe Sync**: Per-event timestamps and deletion tombstones reconcile simultaneous device changes without allowing stale clients to erase newer data.
 
 ---
 
 ## ⚙️ Setup & Installation
 
-Please refer to the separate [SETUP.md](file:///d:/Desktop/Task%20Scheduler%20Project/SETUP.md) file for desktop database backend setups, local network hosting, and PWA setup on mobile (Add to Home Screen).
+Please refer to [SETUP.md](SETUP.md) for local database setup, local network hosting, and PWA setup on mobile.
 
 ---
 
 ## 📁 Project Structure
 
 ```text
-├── backend/          # Centralized Python Flask API server
-│   ├── app.py        # SQLAlchemy schema models, JWT auth routes, and sync handlers
-│   ├── requirements.txt # Declares backend libraries (Flask, PyJWT, bcrypt, etc.)
-│   └── .env.example  # Template for MySQL credentials
+├── api/
+│   └── index.py      # Flask app, SQLAlchemy models, auth routes, and sync handlers
+├── requirements.txt  # Python dependencies
 ├── index.html        # Main HTML skeleton (includes glassmorphic login overlays)
 ├── styles.css        # Responsive layouts, tabular timeline rows, and glassmorphic designs
 ├── app.js            # Frontend logic engine, client API sync calls, and view renders

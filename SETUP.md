@@ -11,7 +11,7 @@ Ensure you have **Python 3.9+** installed on your computer.
 ### Step 1: Install Dependencies
 Open your terminal (PowerShell, Command Prompt, or Terminal) in the project root directory and run:
 ```bash
-pip install -r backend/requirements.txt
+pip install -r requirements.txt
 ```
 *(Tip: You can use a Python virtual environment `python -m venv venv` if you want to isolate the packages).*
 
@@ -20,21 +20,34 @@ pip install -r backend/requirements.txt
    ```sql
    CREATE DATABASE syncra_db;
    ```
-2. In the `backend/` folder, copy `.env.example` and name the new file `.env`.
-3. Open `backend/.env` and update the connection credentials under `DATABASE_URL`:
+2. Create a `.env` file in the project root.
+3. Add the connection credentials under `DATABASE_URL`:
    * **Format**: `mysql+pymysql://<db_username>:<db_password>@<db_host>:<db_port>/syncra_db`
    * *Example*: `DATABASE_URL=mysql+pymysql://root:my-secure-password@localhost:3306/syncra_db`
 
+4. Configure Web Push variables:
+   * `VAPID_PUBLIC_KEY` and `VAPID_PRIVATE_KEY`: generate a VAPID key pair with `pywebpush` tooling or your deployment provider.
+   * `VAPID_SUBJECT`: a contact such as `mailto:admin@example.com`.
+   * `CRON_SECRET`: a long random value used to authorize scheduled reminder dispatch.
+
 > [!NOTE]
-> **Out-of-the-Box Fallback**: If you don't have MySQL installed or configured yet, the Flask server will automatically fall back to creating a local **SQLite** database (`backend/instance/syncra.db`) on startup, ensuring the server runs successfully without crashes.
+> **Out-of-the-Box Fallback**: If you don't have MySQL configured, Flask falls back to a local SQLite database (`instance/syncra.db`). Existing records are preserved; synchronization only deletes event IDs explicitly marked as deleted by the client.
+
+### Database migrations and synchronization
+
+The API applies numbered, additive migrations automatically on its first request. Migration `001_conflict_resolution` adds event version metadata and deletion tombstones without dropping existing tables or rows. A `schema_migrations` table records applied versions.
+
+Vercel invokes `/api/reminders/dispatch` every minute using the configured `CRON_SECRET`. Web Push requires HTTPS in production; `localhost` is permitted for local browser testing.
+
+Offline changes are stored in the browser's IndexedDB outbox and replayed when Syncra is opened again online. Each account has separate local storage, and simultaneous device edits use last-write-wins timestamps; stale edits and deletes cannot overwrite newer records.
 
 ### Step 3: Run the Flask Server
 From the root project directory, run:
 ```bash
-python backend/app.py
+python api/index.py
 ```
 The server will boot up and start listening on port `5000`:
-👉 **`http://localhost:5000/`**
+👉 **`http://localhost:5000/`** (the frontend remains at `http://localhost:8000/`)
 
 ---
 

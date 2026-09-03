@@ -2,16 +2,14 @@
    Syncra Task Scheduler - PWA Service Worker
    ========================================================================== */
 
-const CACHE_NAME = 'chronos-planner-cache-v8';
+const CACHE_NAME = 'syncra-planner-cache-v9';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
   './styles.css?v=8',
   './app.js?v=8',
   './manifest.json',
-  './icon.svg',
-  'https://unpkg.com/lucide@latest',
-  'https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap'
+  './icon.svg'
 ];
 
 // Install Event - Pre-cache files
@@ -19,7 +17,9 @@ self.addEventListener('install', (e) => {
   e.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
       console.log('[Service Worker] Pre-caching static assets');
-      return cache.addAll(ASSETS_TO_CACHE);
+      return Promise.all(ASSETS_TO_CACHE.map(asset =>
+        cache.add(asset).catch(error => console.warn('[Service Worker] Skipping unavailable asset:', asset, error))
+      ));
     }).then(() => self.skipWaiting())
   );
 });
@@ -58,4 +58,30 @@ self.addEventListener('fetch', (e) => {
       }
     })
   );
+});
+
+self.addEventListener('push', (e) => {
+  let data = {};
+  try {
+    data = e.data ? e.data.json() : {};
+  } catch (error) {
+    data = { body: e.data ? e.data.text() : 'You have a scheduled reminder.' };
+  }
+  e.waitUntil(self.registration.showNotification(data.title || 'Syncra Reminder', {
+    body: data.body || 'You have a scheduled reminder.',
+    icon: './icon.svg',
+    badge: './icon.svg',
+    requireInteraction: true,
+    tag: data.eventId || 'syncra-reminder',
+    data: { url: data.url || './index.html', eventId: data.eventId }
+  }));
+});
+
+self.addEventListener('notificationclick', (e) => {
+  e.notification.close();
+  e.waitUntil(clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clientList => {
+    const existing = clientList.find(client => 'focus' in client);
+    if (existing) return existing.focus();
+    return clients.openWindow(e.notification.data.url);
+  }));
 });

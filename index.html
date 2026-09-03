@@ -129,6 +129,10 @@
           <i data-lucide="log-out" style="width: 14px; height: 14px;"></i>
         </button>
       </div>
+      <div class="sidebar-user-actions">
+        <button class="footer-btn" id="btn-change-password" type="button">Change Password</button>
+        <button class="footer-btn" id="btn-delete-account" type="button">Delete Account</button>
+      </div>
     </aside>
 
     <!-- Main Content Area -->
@@ -141,6 +145,7 @@
           <p id="header-subtitle">Plan your agenda and stay ahead of the schedule.</p>
         </div>
         <div class="header-right">
+          <input class="custom-select" id="agenda-search" type="search" placeholder="Search agenda..." aria-label="Search agenda">
           <!-- Notification Status Button -->
           <button class="header-action-btn" id="btn-toggle-notifications" title="Enable System Notifications">
             <i data-lucide="bell"></i>
@@ -220,6 +225,17 @@
             <div class="card-header">
               <h3 id="agenda-title">Agenda: July 30, 2026</h3>
               <div class="card-actions">
+                <select id="priority-filter" class="custom-select" aria-label="Filter by priority">
+                  <option value="all">All priorities</option>
+                  <option value="high">High priority</option>
+                  <option value="medium">Medium priority</option>
+                  <option value="low">Low priority</option>
+                </select>
+                <select id="status-filter" class="custom-select" aria-label="Filter by status">
+                  <option value="all">All status</option>
+                  <option value="pending">Pending</option>
+                  <option value="completed">Completed</option>
+                </select>
                 <select id="sort-filter" class="custom-select">
                   <option value="time">Sort by Time</option>
                   <option value="priority">Sort by Priority</option>
@@ -285,6 +301,11 @@
             <input type="time" id="form-time-start">
           </div>
 
+          <div class="form-group">
+            <label for="form-duration">Duration (minutes)</label>
+            <input type="number" id="form-duration" min="1" max="1440" placeholder="30">
+          </div>
+
           <!-- Meeting specific: End Time -->
           <div class="form-group" id="group-time-end">
             <label for="form-time-end">End Time</label>
@@ -325,6 +346,44 @@
               <option value="120">2 hours before</option>
             </select>
           </div>
+
+          <div class="form-group">
+            <label for="form-alarm-tone">Alarm Tone</label>
+            <select id="form-alarm-tone">
+              <option value="classic">Classic Chime</option>
+              <option value="bright">Bright Three-Tone</option>
+              <option value="soft">Soft Reminder</option>
+              <option value="urgent">Urgent Alert</option>
+              <option value="digital">Digital Pulse</option>
+              <option value="calm">Calm Rising</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="form-additional-reminders">Additional Reminders</label>
+            <select id="form-additional-reminders" multiple size="3" aria-label="Additional reminders">
+              <option value="5">5 minutes before</option>
+              <option value="15">15 minutes before</option>
+              <option value="30">30 minutes before</option>
+              <option value="60">1 hour before</option>
+              <option value="120">2 hours before</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="form-recurrence">Repeat</label>
+            <select id="form-recurrence">
+              <option value="none">Does not repeat</option>
+              <option value="daily">Daily</option>
+              <option value="weekly">Weekly</option>
+              <option value="monthly">Monthly</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="form-recurrence-until">Repeat until</label>
+            <input type="date" id="form-recurrence-until">
+          </div>
         </div>
 
         <!-- Meeting specific: Link & Location -->
@@ -341,6 +400,19 @@
             <i data-lucide="map-pin"></i>
             <input type="text" id="form-meeting-location" placeholder="Conference Room A, Office">
           </div>
+        </div>
+
+        <div class="form-group span-full hidden" id="group-sharing">
+          <label>Share Event</label>
+          <div class="subtask-input-row">
+            <input type="email" id="form-share-email" placeholder="user@example.com">
+            <select id="form-share-permission">
+              <option value="view">Can view</option>
+              <option value="edit">Can edit</option>
+            </select>
+            <button type="button" class="btn btn-secondary" id="btn-share-event">Share</button>
+          </div>
+          <ul class="subtasks-form-list" id="event-shares-list"></ul>
         </div>
 
         <!-- Completion status (Edit Mode only) -->
@@ -382,7 +454,7 @@
       <div class="alarm-bell-icon">
         <i data-lucide="bell-ring"></i>
       </div>
-      <h2>REMINER ALARM</h2>
+      <h2>REMINDER ALARM</h2>
       <div class="alarm-item-type" id="alarm-item-type">MEETING</div>
       <div class="alarm-item-title" id="alarm-item-title">Product Alignment Sync</div>
       <div class="alarm-item-time" id="alarm-item-time">Starts in 5 minutes (15:00)</div>

@@ -9,13 +9,93 @@ const state = {
   activeView: 'calendar',         // 'calendar' | 'timeline'
   activeFilter: 'all',            // 'all' | 'tasks' | 'meetings' | 'urgent'
   sortFilter: 'time',             // 'time' | 'priority' | 'status'
+  searchQuery: '',
+  priorityFilter: 'all',
+  statusFilter: 'all',
   editingEventId: null,           // ID of the event currently being edited
   tempSubtasks: [],               // Subtasks list in current form
   activeAlarmEvent: null,         // Event triggering the current alarm
+  activeAlarmReminder: null,
   userToken: localStorage.getItem('syncra_token') || null,
   userEmail: localStorage.getItem('syncra_email') || null,
   authMode: 'login'               // 'login' | 'signup'
 };
+
+const STORAGE_KEYS = {
+  events: 'syncra_schedule_events',
+  deletedEvents: 'syncra_deleted_event_ids',
+  syncPending: 'syncra_sync_pending'
+};
+
+function getScopedStorageKey(key, email = state.userEmail) {
+  const scope = email ? encodeURIComponent(email.toLowerCase()) : 'guest';
+  return `${STORAGE_KEYS[key]}_${scope}`;
+}
+
+let deletedEventIds = JSON.parse(localStorage.getItem(getScopedStorageKey('deletedEvents')) || '[]');
+
+function openSyncOutbox() {
+  return new Promise((resolve, reject) => {
+    if (!window.indexedDB) {
+      reject(new Error('IndexedDB is unavailable'));
+      return;
+    }
+    const request = indexedDB.open('syncra-outbox', 1);
+    request.onupgradeneeded = () => request.result.createObjectStore('syncs');
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+}
+
+function queueSyncPayload() {
+  if (!state.userToken) return;
+  const payload = {
+    events: state.events.filter(event => !isSharedEvent(event)),
+    deletedIds: deletedEventIds
+  };
+  openSyncOutbox().then(database => new Promise((resolve, reject) => {
+    const transaction = database.transaction('syncs', 'readwrite');
+    transaction.objectStore('syncs').put(payload, getScopedStorageKey('syncPending'));
+    transaction.oncomplete = () => {
+      database.close();
+      resolve();
+    };
+    transaction.onerror = () => {
+      database.close();
+      reject(transaction.error);
+    };
+  })).catch(error => console.warn('Could not persist offline sync:', error));
+}
+
+function readQueuedSyncPayload() {
+  return openSyncOutbox().then(database => new Promise((resolve, reject) => {
+    const transaction = database.transaction('syncs', 'readonly');
+    const request = transaction.objectStore('syncs').get(getScopedStorageKey('syncPending'));
+    request.onsuccess = () => {
+      database.close();
+      resolve(request.result || null);
+    };
+    request.onerror = () => {
+      database.close();
+      reject(request.error);
+    };
+  })).catch(() => null);
+}
+
+function clearQueuedSyncPayload() {
+  return openSyncOutbox().then(database => new Promise((resolve, reject) => {
+    const transaction = database.transaction('syncs', 'readwrite');
+    transaction.objectStore('syncs').delete(getScopedStorageKey('syncPending'));
+    transaction.oncomplete = () => {
+      database.close();
+      resolve();
+    };
+    transaction.onerror = () => {
+      database.close();
+      reject(transaction.error);
+    };
+  })).catch(() => undefined);
+}
 
 // --- DOM Cache ---
 const DOM = {
@@ -41,6 +121,9 @@ const DOM = {
   btnFocusOverdue: document.getElementById('btn-focus-overdue'),
   agendaTitle: document.getElementById('agenda-title'),
   sortFilterSelect: document.getElementById('sort-filter'),
+  agendaSearch: document.getElementById('agenda-search'),
+  priorityFilter: document.getElementById('priority-filter'),
+  statusFilter: document.getElementById('status-filter'),
 
   // Auth elements
   authOverlay: document.getElementById('auth-overlay'),
@@ -58,6 +141,8 @@ const DOM = {
   sidebarUserPanel: document.getElementById('sidebar-user-panel'),
   userEmailDisplay: document.getElementById('user-email-display'),
   btnLogout: document.getElementById('btn-logout'),
+  btnChangePassword: document.getElementById('btn-change-password'),
+  btnDeleteAccount: document.getElementById('btn-delete-account'),
   agendaItemsContainer: document.getElementById('agenda-items-container'),
   btnEmptyAdd: document.getElementById('btn-empty-add'),
   
@@ -77,6 +162,11 @@ const DOM = {
   formPriority: document.getElementById('form-priority'),
   formCategory: document.getElementById('form-category'),
   formReminder: document.getElementById('form-reminder'),
+  formAdditionalReminders: document.getElementById('form-additional-reminders'),
+  formAlarmTone: document.getElementById('form-alarm-tone'),
+  formDuration: document.getElementById('form-duration'),
+  formRecurrence: document.getElementById('form-recurrence'),
+  formRecurrenceUntil: document.getElementById('form-recurrence-until'),
   formMeetingLink: document.getElementById('form-meeting-link'),
   formMeetingLocation: document.getElementById('form-meeting-location'),
   formDescription: document.getElementById('form-description'),
@@ -92,6 +182,11 @@ const DOM = {
   groupTimeEnd: document.getElementById('group-time-end'),
   groupPriority: document.getElementById('group-priority'),
   groupMeetingDetails: document.getElementById('group-meeting-details'),
+  groupSharing: document.getElementById('group-sharing'),
+  formShareEmail: document.getElementById('form-share-email'),
+  formSharePermission: document.getElementById('form-share-permission'),
+  btnShareEvent: document.getElementById('btn-share-event'),
+  eventSharesList: document.getElementById('event-shares-list'),
   groupSubtasks: document.getElementById('group-subtasks'),
   groupCompleted: document.getElementById('group-completed'),
 
@@ -130,9 +225,10 @@ const DOM = {
 // --- Audio Synthesizer Context ---
 let audioCtx = null;
 let alarmAudioInterval = null;
+let lastLiveDate = getLocalDateString(new Date());
 
 function initAudioContext() {
-  if (!audioCtx) {
+  if (!audioCtx && (window.AudioContext || window.webkitAudioContext)) {
     audioCtx = new (window.AudioContext || window.webkitAudioContext)();
   }
   if (audioCtx.state === 'suspended') {
@@ -161,20 +257,30 @@ function playAlarmNote(frequency, startTime, duration) {
   osc.stop(startTime + duration);
 }
 
-function playAlarmChimeSequence() {
+const ALARM_TONES = {
+  classic: [659.25, 880],
+  bright: [784, 988, 1174],
+  soft: [523.25, 659.25, 783.99],
+  urgent: [880, 880, 1046.5, 880],
+  digital: [440, 660, 880, 660],
+  calm: [392, 523.25, 659.25]
+};
+
+function playAlarmChimeSequence(tone = 'classic') {
   initAudioContext();
   if (!audioCtx) return;
   
   const now = audioCtx.currentTime;
-  // Standard dual note digital chime: E5 followed by A5
-  playAlarmNote(659.25, now, 0.4);      // E5
-  playAlarmNote(880.00, now + 0.15, 0.65); // A5
+  const notes = ALARM_TONES[tone] || ALARM_TONES.classic;
+  notes.forEach((frequency, index) => {
+    playAlarmNote(frequency, now + index * 0.14, index === notes.length - 1 ? 0.65 : 0.4);
+  });
 }
 
-function startAlarmAudio() {
+function startAlarmAudio(tone = 'classic') {
   stopAlarmAudio();
-  playAlarmChimeSequence();
-  alarmAudioInterval = setInterval(playAlarmChimeSequence, 1800);
+  playAlarmChimeSequence(tone);
+  alarmAudioInterval = setInterval(() => playAlarmChimeSequence(tone), 1800);
 }
 
 function stopAlarmAudio() {
@@ -194,14 +300,18 @@ function init() {
     // Fetch user data from centralized MySQL database
     syncEventsFromBackend();
   } else {
-    // Load mock data on first launch to showcase layout before auth displays
-    loadMockData();
+    loadLocalOrMockData();
   }
+
+  renderApp();
 
   setupEventListeners();
   startLiveClock();
   startAlarmTicker();
   checkNotificationPermissionState();
+  if (state.userToken && 'Notification' in window && Notification.permission === 'granted') {
+    registerPushSubscription();
+  }
   
   // Run Lucide renderer on startup to bind all icons (sidebar, auth logo, etc.)
   if (window.lucide) {
@@ -216,13 +326,45 @@ function init() {
         .catch(err => console.log('Service Worker registration failed:', err));
     });
   }
+
+  window.addEventListener('online', syncEventsToBackend);
 }
 
 function saveToStorage() {
-  localStorage.setItem('syncra_schedule_events', JSON.stringify(state.events));
+  localStorage.setItem(getScopedStorageKey('events'), JSON.stringify(state.events));
+  localStorage.setItem(getScopedStorageKey('deletedEvents'), JSON.stringify(deletedEventIds));
+  if (state.userToken) {
+    localStorage.setItem(getScopedStorageKey('syncPending'), 'true');
+    queueSyncPayload();
+  }
   updateCountBadges();
   updateAnalytics();
   syncEventsToBackend(); // Push updates to MySQL backend database!
+}
+
+function isSharedEvent(event) {
+  return Boolean(event && event.isShared);
+}
+
+function canEditEvent(event) {
+  return !isSharedEvent(event) || event.sharePermission === 'edit';
+}
+
+function loadLocalOrMockData() {
+  let savedData = localStorage.getItem(getScopedStorageKey('events'));
+  if (!savedData) {
+    savedData = localStorage.getItem(STORAGE_KEYS.events);
+    if (savedData) localStorage.setItem(getScopedStorageKey('events'), savedData);
+  }
+  if (savedData) {
+    try {
+      state.events = JSON.parse(savedData);
+      return;
+    } catch (error) {
+      localStorage.removeItem(getScopedStorageKey('events'));
+    }
+  }
+  loadMockData();
 }
 
 function loadMockData() {
@@ -294,7 +436,7 @@ function loadMockData() {
       dismissedAlarm: false
     }
   ];
-  saveToStorage();
+  localStorage.setItem(getScopedStorageKey('events'), JSON.stringify(state.events));
 }
 
 
@@ -347,6 +489,14 @@ function syncNavigationActiveStates() {
 function startLiveClock() {
   function tick() {
     const now = new Date();
+    const liveDate = getLocalDateString(now);
+    if (liveDate !== lastLiveDate) {
+      if (getLocalDateString(state.currentDate) === lastLiveDate) {
+        state.currentDate = new Date(now);
+        renderApp();
+      }
+      lastLiveDate = liveDate;
+    }
     // 24 Hour Format for live-time
     const hrs = String(now.getHours()).padStart(2, '0');
     const mins = String(now.getMinutes()).padStart(2, '0');
@@ -618,6 +768,18 @@ function renderDailyTimeline() {
     
     row.appendChild(timeCell);
     row.appendChild(eventsCell);
+    row.addEventListener('dragover', (event) => event.preventDefault());
+    row.addEventListener('drop', (event) => {
+      event.preventDefault();
+      const eventId = event.dataTransfer.getData('text/plain');
+      const scheduled = state.events.find(item => item.id === eventId);
+      if (!scheduled) return;
+      scheduled.date = getLocalDateString(state.currentDate);
+      scheduled.startTime = `${String(hr).padStart(2, '0')}:00`;
+      scheduled.updatedAt = new Date().toISOString();
+      saveToStorage();
+      renderApp();
+    });
     DOM.timelineSlots.appendChild(row);
   }
   
@@ -647,6 +809,9 @@ function renderDailyTimeline() {
     // Draw event box
     const card = document.createElement('div');
     card.className = `timeline-event-card type-${ev.type}`;
+    card.draggable = true;
+    card.addEventListener('dragstart', (event) => event.dataTransfer.setData('text/plain', ev.id));
+    if (ev.duration) card.style.minHeight = `${Math.max(70, Math.min(360, ev.duration * 1.5))}px`;
     if (ev.completed) card.classList.add('completed');
     
     // Inner container for horizontal alignment
@@ -661,6 +826,7 @@ function renderDailyTimeline() {
       const chk = document.createElement('input');
       chk.type = 'checkbox';
       chk.checked = ev.completed;
+      chk.disabled = !canEditEvent(ev);
       chk.addEventListener('change', (e) => {
         e.stopPropagation(); // Avoid opening details modal
         toggleEventCompletion(ev.id);
@@ -731,6 +897,17 @@ function renderAgendaList() {
   } else if (state.activeFilter === 'urgent') {
     items = items.filter(e => e.priority === 'high' && !e.completed);
   }
+
+  if (state.searchQuery) {
+    const query = state.searchQuery.toLowerCase();
+    items = items.filter(e => [e.title, e.description, e.category, e.location]
+      .filter(Boolean).some(value => value.toLowerCase().includes(query)));
+  }
+  if (state.priorityFilter !== 'all') {
+    items = items.filter(e => e.priority === state.priorityFilter);
+  }
+  if (state.statusFilter === 'completed') items = items.filter(e => e.completed);
+  if (state.statusFilter === 'pending') items = items.filter(e => !e.completed);
   
   // Sorting Engine
   items.sort((a, b) => {
@@ -771,6 +948,7 @@ function renderAgendaList() {
     const chk = document.createElement('input');
     chk.type = 'checkbox';
     chk.checked = ev.completed;
+    chk.disabled = !canEditEvent(ev);
     chk.addEventListener('change', () => toggleEventCompletion(ev.id));
     
     const customSpan = document.createElement('span');
@@ -879,6 +1057,7 @@ function renderAgendaList() {
         const schk = document.createElement('input');
         schk.type = 'checkbox';
         schk.checked = s.completed;
+        schk.disabled = !canEditEvent(ev);
         schk.addEventListener('change', () => toggleSubtaskCompletion(ev.id, s.id));
         
         const slbl = document.createElement('span');
@@ -913,17 +1092,19 @@ function renderAgendaList() {
     
     const editBtn = document.createElement('button');
     editBtn.className = 'action-icon-btn';
-    editBtn.title = 'Edit Event';
-    editBtn.innerHTML = `<i data-lucide="edit-3"></i>`;
+    editBtn.title = isSharedEvent(ev) ? `Shared event (${ev.sharePermission})` : 'Edit Event';
+    editBtn.innerHTML = `<i data-lucide="${isSharedEvent(ev) ? 'users' : 'edit-3'}"></i>`;
     editBtn.addEventListener('click', () => openFormModal(ev.id));
     actionWrap.appendChild(editBtn);
     
-    const deleteBtn = document.createElement('button');
-    deleteBtn.className = 'action-icon-btn delete';
-    deleteBtn.title = 'Delete Event';
-    deleteBtn.innerHTML = `<i data-lucide="trash-2"></i>`;
-    deleteBtn.addEventListener('click', () => deleteEvent(ev.id));
-    actionWrap.appendChild(deleteBtn);
+    if (!isSharedEvent(ev)) {
+      const deleteBtn = document.createElement('button');
+      deleteBtn.className = 'action-icon-btn delete';
+      deleteBtn.title = 'Delete Event';
+      deleteBtn.innerHTML = `<i data-lucide="trash-2"></i>`;
+      deleteBtn.addEventListener('click', () => deleteEvent(ev.id));
+      actionWrap.appendChild(deleteBtn);
+    }
     
     box.appendChild(actionWrap);
     DOM.agendaItemsContainer.appendChild(box);
@@ -934,20 +1115,33 @@ function renderAgendaList() {
 // --- Action Handlers ---
 function toggleEventCompletion(eventId) {
   const ev = state.events.find(e => e.id === eventId);
-  if (ev) {
+  if (ev && canEditEvent(ev)) {
     ev.completed = !ev.completed;
-    saveToStorage();
-    renderApp();
-    showToast(`"${ev.title}" marked as ${ev.completed ? 'completed' : 'pending'}.`, "success");
+    ev.updatedAt = new Date().toISOString();
+    if (isSharedEvent(ev)) {
+      updateSharedEvent(ev).then(updated => {
+        Object.assign(ev, updated);
+        saveToStorage();
+        renderApp();
+        showToast(`"${ev.title}" marked as ${ev.completed ? 'completed' : 'pending'}.`, "success");
+      }).catch(error => showToast(error.message, 'error'));
+    } else {
+      saveToStorage();
+      renderApp();
+      showToast(`"${ev.title}" marked as ${ev.completed ? 'completed' : 'pending'}.`, "success");
+    }
+  } else if (ev) {
+    showToast('This shared event is view-only.', 'info');
   }
 }
 
 function toggleSubtaskCompletion(taskId, subtaskId) {
   const ev = state.events.find(e => e.id === taskId);
-  if (ev && ev.subtasks) {
+  if (ev && ev.subtasks && canEditEvent(ev)) {
     const sub = ev.subtasks.find(s => s.id === subtaskId);
     if (sub) {
       sub.completed = !sub.completed;
+      ev.updatedAt = new Date().toISOString();
       
       // Auto complete parent task if all subtasks are finished
       const allDone = ev.subtasks.every(s => s.completed);
@@ -958,9 +1152,19 @@ function toggleSubtaskCompletion(taskId, subtaskId) {
         ev.completed = false;
       }
       
-      saveToStorage();
-      renderApp();
+      if (isSharedEvent(ev)) {
+        updateSharedEvent(ev).then(updated => {
+          Object.assign(ev, updated);
+          saveToStorage();
+          renderApp();
+        }).catch(error => showToast(error.message, 'error'));
+      } else {
+        saveToStorage();
+        renderApp();
+      }
     }
+  } else if (ev) {
+    showToast('This shared event is view-only.', 'info');
   }
 }
 
@@ -969,6 +1173,9 @@ function deleteEvent(eventId) {
   if (index !== -1) {
     const title = state.events[index].title;
     state.events.splice(index, 1);
+    if (state.userToken && !deletedEventIds.some(deleted => (typeof deleted === 'string' ? deleted : deleted.id) === eventId)) {
+      deletedEventIds.push({ id: eventId, updatedAt: new Date().toISOString() });
+    }
     saveToStorage();
     renderApp();
     showToast(`"${title}" deleted successfully.`, "info");
@@ -998,10 +1205,17 @@ function openFormModal(eventId = null) {
     DOM.formTitle.value = ev.title;
     DOM.formDate.value = ev.date;
     DOM.formTimeStart.value = ev.startTime || '';
+    DOM.formDuration.value = ev.duration || '';
+    DOM.formRecurrence.value = 'none';
+    DOM.formRecurrenceUntil.value = '';
     DOM.formTimeEnd.value = ev.endTime || '';
     DOM.formPriority.value = ev.priority;
     DOM.formCategory.value = ev.category || 'work';
     DOM.formReminder.value = ev.reminder;
+    Array.from(DOM.formAdditionalReminders.options).forEach(option => {
+      option.selected = (ev.reminders || []).includes(option.value);
+    });
+    DOM.formAlarmTone.value = ev.alarmTone || 'classic';
     DOM.formMeetingLink.value = ev.link || '';
     DOM.formMeetingLocation.value = ev.location || '';
     DOM.formDescription.value = ev.description || '';
@@ -1016,22 +1230,48 @@ function openFormModal(eventId = null) {
     }
     
     DOM.btnDeleteItem.classList.remove('hidden');
+    if (isSharedEvent(ev)) {
+      DOM.groupSharing.classList.add('hidden');
+      DOM.btnDeleteItem.classList.add('hidden');
+    } else {
+      DOM.groupSharing.classList.remove('hidden');
+      loadEventShares(ev.id);
+    }
     
     // Show completion checkbox in edit mode
     DOM.groupCompleted.classList.remove('hidden');
     DOM.groupCompleted.style.display = 'flex';
     DOM.formCompleted.checked = ev.completed;
+    const canEdit = canEditEvent(ev);
+    [DOM.formTitle, DOM.formDate, DOM.formTimeStart, DOM.formTimeEnd, DOM.formPriority,
+      DOM.formCategory, DOM.formReminder, DOM.formAdditionalReminders, DOM.formAlarmTone,
+      DOM.formDuration, DOM.formMeetingLink, DOM.formMeetingLocation, DOM.formDescription,
+      DOM.formCompleted, DOM.tabTask, DOM.tabMeeting, DOM.btnAddSubtask].forEach(control => {
+      if (control) control.disabled = !canEdit;
+    });
+    DOM.btnSubmitForm.classList.toggle('hidden', !canEdit);
+    if (!canEdit) showToast('This shared event is view-only.', 'info');
   } else {
     // Create mode
     DOM.modalTitle.textContent = "Create Scheduled Event";
     DOM.formItemId.value = '';
     DOM.formDate.value = getLocalDateString(state.currentDate);
     DOM.btnDeleteItem.classList.add('hidden');
+    DOM.groupSharing.classList.add('hidden');
     
     // Hide completion checkbox in create mode
     DOM.groupCompleted.classList.add('hidden');
     DOM.groupCompleted.style.display = 'none';
     DOM.formCompleted.checked = false;
+    DOM.btnSubmitForm.classList.remove('hidden');
+    [DOM.formTitle, DOM.formDate, DOM.formTimeStart, DOM.formTimeEnd, DOM.formPriority,
+      DOM.formCategory, DOM.formReminder, DOM.formAdditionalReminders, DOM.formAlarmTone,
+      DOM.formDuration, DOM.formMeetingLink, DOM.formMeetingLocation, DOM.formDescription,
+      DOM.formCompleted, DOM.tabTask, DOM.tabMeeting, DOM.btnAddSubtask].forEach(control => {
+      if (control) control.disabled = false;
+    });
+    DOM.formAlarmTone.value = 'classic';
+    Array.from(DOM.formAdditionalReminders.options).forEach(option => { option.selected = false; });
     
     // Default values
     setFormTypeTab('task');
@@ -1087,6 +1327,10 @@ function addSubtaskFromInput() {
 
 function renderFormSubtasks() {
   DOM.subtasksFormListContainer.innerHTML = '';
+  const editingEvent = state.editingEventId
+    ? state.events.find(event => event.id === state.editingEventId)
+    : null;
+  const canEdit = canEditEvent(editingEvent);
   state.tempSubtasks.forEach((sub, idx) => {
     const li = document.createElement('li');
     li.className = 'subtask-form-item';
@@ -1105,6 +1349,8 @@ function renderFormSubtasks() {
         <i data-lucide="trash-2" style="width:14px;height:14px;"></i>
       </button>
     `;
+    li.querySelector('.subtask-form-checkbox').disabled = !canEdit;
+    li.querySelector('.subtask-delete-btn').disabled = !canEdit;
     
     // Checkbox toggle listener
     li.querySelector('.subtask-form-checkbox').addEventListener('change', (e) => {
@@ -1176,12 +1422,43 @@ function validateForm() {
   return isValid;
 }
 
+function expandRecurringEvent(eventData) {
+  const frequency = DOM.formRecurrence.value;
+  const until = DOM.formRecurrenceUntil.value;
+  if (frequency === 'none' || !until || state.editingEventId) return [eventData];
+
+  const events = [eventData];
+  const cursor = parseLocalDate(eventData.date);
+  const endDate = parseLocalDate(until);
+  let occurrence = 1;
+  while (cursor < endDate && occurrence < 365) {
+    if (frequency === 'daily') cursor.setDate(cursor.getDate() + 1);
+    else if (frequency === 'weekly') cursor.setDate(cursor.getDate() + 7);
+    else cursor.setMonth(cursor.getMonth() + 1);
+    if (cursor > endDate) break;
+    events.push({ ...eventData, id: `${eventData.id}-${occurrence}`, date: getLocalDateString(cursor), recurrence: 'none' });
+    occurrence++;
+  }
+  return events;
+}
+
 // Form submit action
 function handleFormSubmit(e) {
   e.preventDefault();
   
   if (!validateForm()) {
     showToast("Please fix the validation errors in the form.", "error");
+    return;
+  }
+
+  if (DOM.formReminder.value !== 'none' && !DOM.formTimeStart.value) {
+    showToast("Set a time before adding a reminder.", "error");
+    DOM.formTimeStart.parentElement.classList.add('invalid');
+    return;
+  }
+  if (DOM.formRecurrence.value !== 'none' && (!DOM.formRecurrenceUntil.value || DOM.formRecurrenceUntil.value < DOM.formDate.value)) {
+    showToast("Choose a valid repeat end date.", "error");
+    DOM.formRecurrenceUntil.parentElement.classList.add('invalid');
     return;
   }
   
@@ -1194,13 +1471,29 @@ function handleFormSubmit(e) {
     title: DOM.formTitle.value.trim(),
     date: DOM.formDate.value,
     startTime: DOM.formTimeStart.value || null,
+    duration: DOM.formDuration.value ? Number(DOM.formDuration.value) : null,
     priority: itemType === 'task' ? DOM.formPriority.value : 'medium',
     category: DOM.formCategory.value,
     reminder: DOM.formReminder.value,
+    reminders: Array.from(new Set([DOM.formReminder.value, ...Array.from(DOM.formAdditionalReminders.selectedOptions).map(option => option.value)]))
+      .filter(reminder => reminder !== 'none'),
+    alarmTone: DOM.formAlarmTone.value,
+    recurrence: DOM.formRecurrence.value,
+    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
     description: DOM.formDescription.value.trim(),
+    updatedAt: new Date().toISOString(),
     completed: isEdit ? DOM.formCompleted.checked : false,
     dismissedAlarm: isEdit ? state.events.find(ev => ev.id === state.editingEventId).dismissedAlarm : false
   };
+
+  if (eventData.reminder !== 'none') {
+    requestNotificationPermissionForReminder();
+    try {
+      initAudioContext();
+    } catch (error) {
+      console.warn('Audio reminders are unavailable:', error);
+    }
+  }
   
   if (itemType === 'task') {
     eventData.subtasks = [...state.tempSubtasks];
@@ -1209,13 +1502,26 @@ function handleFormSubmit(e) {
     eventData.link = DOM.formMeetingLink.value.trim() || null;
     eventData.location = DOM.formMeetingLocation.value.trim() || null;
   }
+
+  const existingEvent = isEdit ? state.events.find(ev => ev.id === state.editingEventId) : null;
+  if (existingEvent && isSharedEvent(existingEvent)) {
+    if (!canEditEvent(existingEvent)) return;
+    updateSharedEvent(eventData).then(updated => {
+      Object.assign(existingEvent, updated);
+      saveToStorage();
+      closeFormModal();
+      renderApp();
+      showToast('Shared event updated successfully!', 'success');
+    }).catch(error => showToast(error.message, 'error'));
+    return;
+  }
   
   if (isEdit) {
     const idx = state.events.findIndex(ev => ev.id === state.editingEventId);
     state.events[idx] = eventData;
     showToast("Event updated successfully!", "success");
   } else {
-    state.events.push(eventData);
+    state.events.push(...expandRecurringEvent(eventData));
     showToast("New Event scheduled successfully!", "success");
   }
   
@@ -1230,8 +1536,12 @@ function handleFormSubmit(e) {
 
 // --- Smart Reminder & Alarm Engine ---
 function startAlarmTicker() {
-  // Check alarms every 10 seconds
+  checkAlarms();
   setInterval(checkAlarms, 10000);
+  window.addEventListener('focus', checkAlarms);
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) checkAlarms();
+  });
 }
 
 function checkAlarms() {
@@ -1240,12 +1550,14 @@ function checkAlarms() {
   const nowTimeStr = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
   
   state.events.forEach(ev => {
-    if (ev.completed || ev.dismissedAlarm || !ev.startTime) return;
+    if (ev.completed || !ev.startTime) return;
+    if (ev.dismissedAlarm && !ev.triggeredReminders) return;
     if (ev.date !== todayStr) return;
     
-    // Calculate offset minutes for reminder
-    const reminderOffsetMinutes = ev.reminder === 'none' ? -1 : parseInt(ev.reminder);
-    if (reminderOffsetMinutes < 0) return;
+    const reminderOffsets = ev.reminders && ev.reminders.length > 0
+      ? ev.reminders.map(Number)
+      : (ev.reminder === 'none' ? [] : [parseInt(ev.reminder, 10)]);
+    if (reminderOffsets.length === 0) return;
     
     // Parse event start time
     const [evH, evM] = ev.startTime.split(':').map(Number);
@@ -1257,13 +1569,13 @@ function checkAlarms() {
       if (now < snoozeTime) return; // Still snoozed
     }
     
-    // Calculate exact target notification timestamp
-    const alarmTime = new Date(eventTimeToday.getTime() - (reminderOffsetMinutes * 60 * 1000));
-    
-    // If we've passed the alarm trigger threshold, trigger alarm (with a 20-minute expiry safety window)
-    if (now >= alarmTime && now < new Date(eventTimeToday.getTime() + (20 * 60 * 1000))) {
-      triggerAlarm(ev, reminderOffsetMinutes);
-    }
+    reminderOffsets.forEach(reminderOffsetMinutes => {
+      if ((ev.triggeredReminders || []).includes(String(reminderOffsetMinutes))) return;
+      const alarmTime = new Date(eventTimeToday.getTime() - (reminderOffsetMinutes * 60 * 1000));
+      if (now >= alarmTime && now < new Date(eventTimeToday.getTime() + (20 * 60 * 1000))) {
+        triggerAlarm(ev, reminderOffsetMinutes);
+      }
+    });
   });
 }
 
@@ -1272,6 +1584,7 @@ function triggerAlarm(event, minutesBefore) {
   if (state.activeAlarmEvent && state.activeAlarmEvent.id === event.id) return;
   
   state.activeAlarmEvent = event;
+  state.activeAlarmReminder = minutesBefore;
   
   // Setup overlay
   DOM.alarmItemTitle.textContent = event.title;
@@ -1294,12 +1607,18 @@ function triggerAlarm(event, minutesBefore) {
     DOM.alarmBtnJoin.classList.add('hidden');
   }
   
-  // Reveal alarm popup and kick off audio synthesizer
+  // Show the visual and browser alarms independently so audio restrictions cannot suppress notifications.
   DOM.alarmAlertOverlay.classList.remove('hidden');
-  startAlarmAudio();
-  
-  // Browser push notification fallback
-  sendBrowserNotification(event, labelTime);
+  try {
+    sendBrowserNotification(event, labelTime);
+  } catch (error) {
+    console.warn('Browser notification could not be shown:', error);
+  }
+  try {
+    startAlarmAudio(event.alarmTone || 'classic');
+  } catch (error) {
+    console.warn('Audio alarm could not start:', error);
+  }
 }
 
 function dismissAlarm(isSnooze = false) {
@@ -1317,7 +1636,8 @@ function dismissAlarm(isSnooze = false) {
         showToast(`Alarm for "${ev.title}" snoozed for 5 minutes.`, "info");
       } else {
         // Fully dismissed
-        ev.dismissedAlarm = true;
+        ev.triggeredReminders = [...new Set([...(ev.triggeredReminders || []), String(state.activeAlarmReminder)])];
+        ev.dismissedAlarm = false;
         ev.snoozedUntil = null;
         showToast(`Alarm for "${ev.title}" dismissed.`, "success");
       }
@@ -1325,6 +1645,7 @@ function dismissAlarm(isSnooze = false) {
     }
   }
   state.activeAlarmEvent = null;
+  state.activeAlarmReminder = null;
 }
 
 
@@ -1348,6 +1669,18 @@ function checkNotificationPermissionState() {
   }
 }
 
+function requestNotificationPermissionForReminder() {
+  if (!("Notification" in window) || Notification.permission !== 'default') return;
+  Notification.requestPermission().then(permission => {
+    checkNotificationPermissionState();
+    if (permission !== 'granted') {
+      showToast("Notifications are blocked. Enable them in browser settings to receive reminders.", "info");
+    } else {
+      registerPushSubscription();
+    }
+  }).catch(error => console.warn('Notification permission request failed:', error));
+}
+
 function toggleNotificationsPermission() {
   if (!("Notification" in window)) {
     showToast("Notifications not supported in this browser.", "error");
@@ -1360,6 +1693,7 @@ function toggleNotificationsPermission() {
     Notification.requestPermission().then(permission => {
       checkNotificationPermissionState();
       if (permission === 'granted') {
+        registerPushSubscription();
         showToast("Desktop notifications enabled successfully!", "success");
       } else {
         showToast("Notification permission was denied.", "error");
@@ -1378,7 +1712,7 @@ function sendBrowserNotification(event, description) {
   const title = `Syncra Alarm: ${event.title}`;
   const options = {
     body: description,
-    icon: 'favicon.ico', // Fallback, could load custom png or logo icon
+    icon: 'icon.svg',
     requireInteraction: true,
     tag: event.id
   };
@@ -1417,8 +1751,14 @@ function handleImportFileSelect(e) {
     try {
       const parsed = JSON.parse(evt.target.result);
       if (Array.isArray(parsed)) {
-        // Sanity checks on keys
-        const isValid = parsed.every(item => item.id && item.title && item.type && item.date);
+        const isValid = parsed.every(item => {
+          if (!item || typeof item !== 'object' || !item.id || !item.title || !item.date) return false;
+          if (!['task', 'meeting'].includes(item.type) || typeof item.title !== 'string' || item.title.length > 200) return false;
+          if (!/^\d{4}-\d{2}-\d{2}$/.test(item.date)) return false;
+          if (!Array.isArray(item.subtasks)) return item.type === 'meeting';
+          return item.subtasks.every(subtask => subtask && typeof subtask.id === 'string'
+            && typeof subtask.text === 'string' && subtask.text.trim() && subtask.text.length <= 250);
+        });
         if (isValid) {
           state.events = parsed;
           saveToStorage();
@@ -1553,6 +1893,18 @@ function setupEventListeners() {
     state.sortFilter = e.target.value;
     renderAgendaList();
   });
+  DOM.agendaSearch.addEventListener('input', (e) => {
+    state.searchQuery = e.target.value.trim();
+    renderAgendaList();
+  });
+  DOM.priorityFilter.addEventListener('change', (e) => {
+    state.priorityFilter = e.target.value;
+    renderAgendaList();
+  });
+  DOM.statusFilter.addEventListener('change', (e) => {
+    state.statusFilter = e.target.value;
+    renderAgendaList();
+  });
 
   // Overdue Banner Resolve Button Click
   DOM.btnFocusOverdue.addEventListener('click', () => {
@@ -1640,6 +1992,76 @@ function setupEventListeners() {
     toggleAuthMode();
   });
   DOM.btnLogout.addEventListener('click', handleLogout);
+  DOM.btnChangePassword.addEventListener('click', changePassword);
+  DOM.btnDeleteAccount.addEventListener('click', deleteAccount);
+  DOM.btnShareEvent.addEventListener('click', shareEvent);
+}
+
+function loadEventShares(eventId) {
+  DOM.eventSharesList.innerHTML = '';
+  fetch(`${API_BASE}/events/${encodeURIComponent(eventId)}/shares`, {
+    headers: { 'Authorization': `Bearer ${state.userToken}` }
+  }).then(response => response.ok ? response.json() : [])
+    .then(shares => shares.forEach(share => {
+      const item = document.createElement('li');
+      item.textContent = `${share.email} (${share.permission})`;
+      DOM.eventSharesList.appendChild(item);
+    })).catch(() => undefined);
+}
+
+function shareEvent() {
+  if (!state.editingEventId || !DOM.formShareEmail.value.trim()) return;
+  fetch(`${API_BASE}/events/${encodeURIComponent(state.editingEventId)}/shares`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${state.userToken}` },
+    body: JSON.stringify({ email: DOM.formShareEmail.value.trim(), permission: DOM.formSharePermission.value })
+  }).then(response => response.json().then(data => ({ ok: response.ok, data })))
+    .then(result => {
+      showToast(result.data.message, result.ok ? 'success' : 'error');
+      if (result.ok) {
+        DOM.formShareEmail.value = '';
+        loadEventShares(state.editingEventId);
+      }
+    }).catch(() => showToast('Event sharing failed.', 'error'));
+}
+
+function updateSharedEvent(event) {
+  return fetch(`${API_BASE}/shared/events/${encodeURIComponent(event.id)}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${state.userToken}`
+    },
+    body: JSON.stringify(event)
+  }).then(response => response.json().then(data => {
+    if (!response.ok) throw new Error(data.message || 'Shared event update failed.');
+    return { ...data, isShared: true };
+  }));
+}
+
+function changePassword() {
+  const currentPassword = window.prompt('Enter your current password:');
+  const newPassword = window.prompt('Enter a new password (at least 8 characters):');
+  if (!currentPassword || !newPassword) return;
+  fetch(`${API_BASE}/account/password`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${state.userToken}` },
+    body: JSON.stringify({ currentPassword, newPassword })
+  }).then(response => response.json().then(data => ({ ok: response.ok, data })))
+    .then(result => showToast(result.data.message, result.ok ? 'success' : 'error'))
+    .catch(() => showToast('Password change failed.', 'error'));
+}
+
+function deleteAccount() {
+  if (!window.confirm('Delete your account and all owned events permanently?')) return;
+  fetch(`${API_BASE}/account`, {
+    method: 'DELETE',
+    headers: { 'Authorization': `Bearer ${state.userToken}` }
+  }).then(response => {
+    if (!response.ok) throw new Error('Account deletion failed');
+    handleLogout();
+    showToast('Account deleted successfully.', 'success');
+  }).catch(() => showToast('Account deletion failed.', 'error'));
 }
 
 
@@ -1679,6 +2101,33 @@ function parseLocalDate(dateStr) {
 const API_BASE = window.location.origin.includes('localhost:8000') || window.location.origin.includes('127.0.0.1')
   ? 'http://localhost:5000/api'
   : '/api';
+
+function decodeBase64Url(value) {
+  const padding = '='.repeat((4 - value.length % 4) % 4);
+  const base64 = (value + padding).replace(/-/g, '+').replace(/_/g, '/');
+  return Uint8Array.from(atob(base64), character => character.charCodeAt(0));
+}
+
+function registerPushSubscription() {
+  if (!state.userToken || !('serviceWorker' in navigator) || !('PushManager' in window)) return;
+  Promise.all([
+    fetch(`${API_BASE}/push/config`).then(response => response.ok ? response.json() : null),
+    navigator.serviceWorker.ready
+  ]).then(([config, registration]) => {
+    if (!config || !config.publicKey) return;
+    return registration.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: decodeBase64Url(config.publicKey)
+    }).then(subscription => fetch(`${API_BASE}/push/subscribe`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${state.userToken}`
+      },
+      body: JSON.stringify(subscription.toJSON())
+    }));
+  }).catch(error => console.warn('Push subscription could not be registered:', error));
+}
 
 function showAuthOverlay() {
   if (DOM.authOverlay) {
@@ -1728,42 +2177,92 @@ function syncEventsFromBackend() {
     return res.json();
   })
   .then(data => {
-    state.events = data;
-    // Save to local storage for offline caching
-    localStorage.setItem('syncra_schedule_events', JSON.stringify(state.events));
-    renderApp();
+    const pending = localStorage.getItem(getScopedStorageKey('syncPending')) === 'true';
+    if (pending) {
+      const savedData = localStorage.getItem(getScopedStorageKey('events'));
+      if (savedData) {
+        try {
+          state.events = JSON.parse(savedData);
+        } catch (error) {
+          console.error('Failed to parse pending local schedule:', error);
+        }
+      }
+      syncEventsToBackend().then(() => {
+        if (localStorage.getItem(getScopedStorageKey('syncPending')) !== 'true') {
+          syncEventsFromBackend();
+        }
+      });
+      return;
+    }
+    const ownEvents = Array.isArray(data) ? data : [];
+    return fetch(`${API_BASE}/shared/events`, {
+      headers: { 'Authorization': `Bearer ${state.userToken}` }
+    }).then(sharedResponse => sharedResponse.ok ? sharedResponse.json() : [])
+      .then(sharedEvents => {
+        state.events = ownEvents.concat((Array.isArray(sharedEvents) ? sharedEvents : []).map(event => ({
+          ...event,
+          isShared: true
+        })));
+        localStorage.setItem(getScopedStorageKey('events'), JSON.stringify(state.events));
+        renderApp();
+      });
   })
   .catch(err => {
     console.error('Failed to fetch events from backend:', err);
     // If backend is unreachable, we fall back to local cached events
-    const savedData = localStorage.getItem('syncra_schedule_events');
+    const savedData = localStorage.getItem(getScopedStorageKey('events'));
     if (savedData) {
-      state.events = JSON.parse(savedData);
-      renderApp();
+      try {
+        state.events = JSON.parse(savedData);
+        renderApp();
+      } catch (parseError) {
+        console.error('Failed to parse local schedule:', parseError);
+      }
     }
   });
 }
 
 function syncEventsToBackend() {
-  if (!state.userToken) return;
-  
-  fetch(`${API_BASE}/events/sync`, {
+  if (!state.userToken || !navigator.onLine) return Promise.resolve();
+
+  return readQueuedSyncPayload().then(queuedPayload => {
+    const payload = queuedPayload || {
+      events: state.events.filter(event => !isSharedEvent(event)),
+      deletedIds: deletedEventIds
+    };
+    return fetch(`${API_BASE}/events/sync`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${state.userToken}`
     },
-    body: JSON.stringify({ events: state.events })
+      body: JSON.stringify(payload)
+    });
   })
   .then(res => {
     if (res.status === 401) {
       handleLogout();
+      return;
     }
+    if (!res.ok) throw new Error(`Sync failed with status ${res.status}`);
+    return res.json();
   })
-  .catch(err => console.error('Failed to sync events to backend:', err));
+  .then(data => {
+    if (data && Array.isArray(data.events)) {
+      const sharedEvents = state.events.filter(event => isSharedEvent(event));
+      state.events = data.events.concat(sharedEvents);
+      localStorage.setItem(getScopedStorageKey('events'), JSON.stringify(state.events));
+    }
+    deletedEventIds = [];
+    localStorage.setItem(getScopedStorageKey('deletedEvents'), '[]');
+    localStorage.removeItem(getScopedStorageKey('syncPending'));
+    return clearQueuedSyncPayload();
+  })
+  .catch(err => {
+    localStorage.setItem(getScopedStorageKey('syncPending'), 'true');
+    console.error('Failed to sync events to backend:', err);
+  });
 }
-
-def_auth_switch = toggleAuthMode;
 
 function handleAuthSubmit(e) {
   e.preventDefault();
@@ -1797,6 +2296,7 @@ function handleAuthSubmit(e) {
     state.userEmail = data.email;
     localStorage.setItem('syncra_token', data.token);
     localStorage.setItem('syncra_email', data.email);
+    deletedEventIds = JSON.parse(localStorage.getItem(getScopedStorageKey('deletedEvents')) || '[]');
     
     updateAuthUI();
     
@@ -1827,7 +2327,7 @@ function handleLogout() {
   localStorage.removeItem('syncra_email');
   
   state.events = [];
-  localStorage.removeItem('syncra_schedule_events');
+  deletedEventIds = [];
   
   updateAuthUI();
   renderApp();
