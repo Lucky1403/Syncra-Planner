@@ -151,7 +151,6 @@ const DOM = {
   modalTitle: document.getElementById('modal-title'),
   modalFormClose: document.getElementById('modal-form-close'),
   tabTask: document.getElementById('tab-task'),
-  tabMeeting: document.getElementById('tab-meeting'),
   eventCreationForm: document.getElementById('event-creation-form'),
   formItemId: document.getElementById('form-item-id'),
   formItemType: document.getElementById('form-item-type'),
@@ -1212,8 +1211,8 @@ function openFormModal(eventId = null) {
     DOM.formPriority.value = ev.priority;
     DOM.formCategory.value = ev.category || 'work';
     DOM.formReminder.value = ev.reminder;
-    Array.from(DOM.formAdditionalReminders.options).forEach(option => {
-      option.selected = (ev.reminders || []).includes(option.value);
+    Array.from(DOM.formAdditionalReminders.querySelectorAll('input')).forEach(input => {
+      input.checked = (ev.reminders || []).includes(input.value);
     });
     DOM.formAlarmTone.value = ev.alarmTone || 'classic';
     DOM.formMeetingLink.value = ev.link || '';
@@ -1225,8 +1224,6 @@ function openFormModal(eventId = null) {
       setFormTypeTab('task');
       state.tempSubtasks = ev.subtasks ? [...ev.subtasks] : [];
       renderFormSubtasks();
-    } else {
-      setFormTypeTab('meeting');
     }
     
     DOM.btnDeleteItem.classList.remove('hidden');
@@ -1244,11 +1241,12 @@ function openFormModal(eventId = null) {
     DOM.formCompleted.checked = ev.completed;
     const canEdit = canEditEvent(ev);
     [DOM.formTitle, DOM.formDate, DOM.formTimeStart, DOM.formTimeEnd, DOM.formPriority,
-      DOM.formCategory, DOM.formReminder, DOM.formAdditionalReminders, DOM.formAlarmTone,
+      DOM.formCategory, DOM.formReminder, DOM.formAlarmTone,
       DOM.formDuration, DOM.formMeetingLink, DOM.formMeetingLocation, DOM.formDescription,
-      DOM.formCompleted, DOM.tabTask, DOM.tabMeeting, DOM.btnAddSubtask].forEach(control => {
+      DOM.formCompleted, DOM.tabTask, DOM.btnAddSubtask].forEach(control => {
       if (control) control.disabled = !canEdit;
     });
+    DOM.formAdditionalReminders.querySelectorAll('input').forEach(input => { input.disabled = !canEdit; });
     DOM.btnSubmitForm.classList.toggle('hidden', !canEdit);
     if (!canEdit) showToast('This shared event is view-only.', 'info');
   } else {
@@ -1265,13 +1263,13 @@ function openFormModal(eventId = null) {
     DOM.formCompleted.checked = false;
     DOM.btnSubmitForm.classList.remove('hidden');
     [DOM.formTitle, DOM.formDate, DOM.formTimeStart, DOM.formTimeEnd, DOM.formPriority,
-      DOM.formCategory, DOM.formReminder, DOM.formAdditionalReminders, DOM.formAlarmTone,
+      DOM.formCategory, DOM.formReminder, DOM.formAlarmTone,
       DOM.formDuration, DOM.formMeetingLink, DOM.formMeetingLocation, DOM.formDescription,
-      DOM.formCompleted, DOM.tabTask, DOM.tabMeeting, DOM.btnAddSubtask].forEach(control => {
+      DOM.formCompleted, DOM.tabTask, DOM.btnAddSubtask].forEach(control => {
       if (control) control.disabled = false;
     });
     DOM.formAlarmTone.value = 'classic';
-    Array.from(DOM.formAdditionalReminders.options).forEach(option => { option.selected = false; });
+    DOM.formAdditionalReminders.querySelectorAll('input').forEach(input => { input.checked = false; });
     
     // Default values
     setFormTypeTab('task');
@@ -1287,27 +1285,13 @@ function closeFormModal() {
 }
 
 function setFormTypeTab(type) {
-  DOM.formItemType.value = type;
-  
-  if (type === 'task') {
-    DOM.tabTask.classList.add('active');
-    DOM.tabMeeting.classList.remove('active');
-    
-    DOM.groupTimeEnd.style.display = 'none';
-    DOM.groupPriority.style.display = 'flex';
-    DOM.groupMeetingDetails.style.display = 'none';
-    DOM.groupSubtasks.style.display = 'flex';
-    DOM.labelTimeStart.textContent = "Due Time";
-  } else {
-    DOM.tabTask.classList.remove('active');
-    DOM.tabMeeting.classList.add('active');
-    
-    DOM.groupTimeEnd.style.display = 'flex';
-    DOM.groupPriority.style.display = 'none';
-    DOM.groupMeetingDetails.style.display = 'block';
-    DOM.groupSubtasks.style.display = 'none';
-    DOM.labelTimeStart.textContent = "Start Time";
-  }
+  DOM.formItemType.value = 'task';
+  DOM.tabTask.classList.add('active');
+  DOM.groupTimeEnd.style.display = 'none';
+  DOM.groupPriority.style.display = 'flex';
+  DOM.groupMeetingDetails.style.display = 'none';
+  DOM.groupSubtasks.style.display = 'flex';
+  DOM.labelTimeStart.textContent = "Due Time";
 }
 
 // Subtasks list handling in modal form
@@ -1475,7 +1459,7 @@ function handleFormSubmit(e) {
     priority: itemType === 'task' ? DOM.formPriority.value : 'medium',
     category: DOM.formCategory.value,
     reminder: DOM.formReminder.value,
-    reminders: Array.from(new Set([DOM.formReminder.value, ...Array.from(DOM.formAdditionalReminders.selectedOptions).map(option => option.value)]))
+    reminders: Array.from(new Set([DOM.formReminder.value, ...Array.from(DOM.formAdditionalReminders.querySelectorAll('input:checked')).map(input => input.value)]))
       .filter(reminder => reminder !== 'none'),
     alarmTone: DOM.formAlarmTone.value,
     recurrence: DOM.formRecurrence.value,
@@ -1948,7 +1932,7 @@ function setupEventListeners() {
   DOM.btnCancelForm.addEventListener('click', closeFormModal);
   
   DOM.tabTask.addEventListener('click', () => setFormTypeTab('task'));
-  DOM.tabMeeting.addEventListener('click', () => setFormTypeTab('meeting'));
+  DOM.formAlarmTone.addEventListener('change', () => playAlarmChimeSequence(DOM.formAlarmTone.value));
   
   DOM.btnAddSubtask.addEventListener('click', addSubtaskFromInput);
   DOM.formNewSubtask.addEventListener('keypress', (e) => {

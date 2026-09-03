@@ -1258,6 +1258,7 @@ body {
 /* Modal Tabs */
 .modal-tabs {
   display: flex;
+  width: 50%;
   background: rgba(0, 0, 0, 0.2);
   padding: 4px;
   border-radius: var(--border-radius-md);
@@ -1374,6 +1375,51 @@ body {
 }
 .form-group.invalid .error-message {
   display: block;
+}
+
+.reminder-options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  padding: 6px;
+  background: var(--bg-input);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius-md);
+}
+
+.reminder-option {
+  display: flex !important;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 8px;
+  border-radius: var(--border-radius-sm);
+  color: var(--text-muted) !important;
+  font-size: 11px !important;
+  text-transform: none !important;
+  letter-spacing: 0 !important;
+  cursor: pointer;
+  transition: background var(--transition-fast), color var(--transition-fast);
+}
+
+.reminder-option:hover,
+.reminder-option:has(input:checked) {
+  background: rgba(139, 92, 246, 0.16);
+  color: white !important;
+}
+
+.reminder-option input {
+  width: 15px;
+  height: 15px;
+  margin: 0;
+  accent-color: var(--color-primary);
+  flex: 0 0 auto;
+}
+
+.reminder-option span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* Subtasks List in Form */

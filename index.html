@@ -272,10 +272,6 @@
           <i data-lucide="check-square"></i>
           <span>Task</span>
         </button>
-        <button class="modal-tab" id="tab-meeting" data-type="meeting">
-          <i data-lucide="video"></i>
-          <span>Meeting</span>
-        </button>
       </div>
 
       <form class="event-form" id="event-creation-form" novalidate>
@@ -361,13 +357,13 @@
 
           <div class="form-group">
             <label for="form-additional-reminders">Additional Reminders</label>
-            <select id="form-additional-reminders" multiple size="3" aria-label="Additional reminders">
-              <option value="5">5 minutes before</option>
-              <option value="15">15 minutes before</option>
-              <option value="30">30 minutes before</option>
-              <option value="60">1 hour before</option>
-              <option value="120">2 hours before</option>
-            </select>
+            <div class="reminder-options" id="form-additional-reminders" role="group" aria-label="Additional reminders">
+              <label class="reminder-option"><input type="checkbox" value="5"><span>5 minutes before</span></label>
+              <label class="reminder-option"><input type="checkbox" value="15"><span>15 minutes before</span></label>
+              <label class="reminder-option"><input type="checkbox" value="30"><span>30 minutes before</span></label>
+              <label class="reminder-option"><input type="checkbox" value="60"><span>1 hour before</span></label>
+              <label class="reminder-option"><input type="checkbox" value="120"><span>2 hours before</span></label>
+            </div>
           </div>
 
           <div class="form-group">
