@@ -1,7 +1,7 @@
 {
-  "name": "Syncra Task & Meeting Planner",
+  "name": "Syncra Focused Task Planner",
   "short_name": "Syncra",
-  "description": "Premium glassmorphic task scheduler and meeting planner to organize your schedule.",
+  "description": "A focused task planner for organizing your schedule.",
   "start_url": "./index.html",
   "display": "standalone",
   "orientation": "portrait-primary",

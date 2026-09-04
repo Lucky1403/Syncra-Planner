@@ -1,6 +1,6 @@
-# Syncra - Task & Meeting Planner (Full-Stack PWA)
+# Syncra - Focused Task Planner (Full-Stack PWA)
 
-Syncra is a premium, high-end, full-stack Progressive Web App (PWA) designed to help you organize your daily tasks, meetings, and schedules. It features a futuristic **dark-mode glassmorphism design**, interactive visual views, a synthesized audio reminder system, centralized database synchronization, and seamless offline capability.
+Syncra is a focused, full-stack Progressive Web App (PWA) for organizing daily tasks and schedules. It features calendar and timeline views, reminders, centralized database synchronization, and seamless offline capability.
 
 ---
 

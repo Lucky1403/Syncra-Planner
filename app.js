@@ -1,5 +1,5 @@
 /* ==========================================================================
-   Syncra Task & Meeting Scheduler - Logic Engine
+  Syncra Task Planner - Logic Engine
    ========================================================================== */
 
 // --- Global App State ---
@@ -7,7 +7,7 @@ const state = {
   events: [],
   currentDate: new Date(),        // The active calendar / timeline date
   activeView: 'calendar',         // 'calendar' | 'timeline'
-  activeFilter: 'all',            // 'all' | 'tasks' | 'meetings' | 'urgent'
+  activeFilter: 'all',            // 'all' | 'urgent'
   sortFilter: 'time',             // 'time' | 'priority' | 'status'
   searchQuery: '',
   priorityFilter: 'all',
@@ -157,7 +157,6 @@ const DOM = {
   formTitle: document.getElementById('form-title'),
   formDate: document.getElementById('form-date'),
   formTimeStart: document.getElementById('form-time-start'),
-  formTimeEnd: document.getElementById('form-time-end'),
   formPriority: document.getElementById('form-priority'),
   formCategory: document.getElementById('form-category'),
   formReminder: document.getElementById('form-reminder'),
@@ -166,8 +165,6 @@ const DOM = {
   formDuration: document.getElementById('form-duration'),
   formRecurrence: document.getElementById('form-recurrence'),
   formRecurrenceUntil: document.getElementById('form-recurrence-until'),
-  formMeetingLink: document.getElementById('form-meeting-link'),
-  formMeetingLocation: document.getElementById('form-meeting-location'),
   formDescription: document.getElementById('form-description'),
   formCompleted: document.getElementById('form-completed'),
   formNewSubtask: document.getElementById('form-new-subtask'),
@@ -178,9 +175,7 @@ const DOM = {
   btnSubmitForm: document.getElementById('btn-submit-form'),
   
   // Dynamic form containers
-  groupTimeEnd: document.getElementById('group-time-end'),
   groupPriority: document.getElementById('group-priority'),
-  groupMeetingDetails: document.getElementById('group-meeting-details'),
   groupSharing: document.getElementById('group-sharing'),
   formShareEmail: document.getElementById('form-share-email'),
   formSharePermission: document.getElementById('form-share-permission'),
@@ -196,7 +191,6 @@ const DOM = {
   alarmItemTime: document.getElementById('alarm-item-time'),
   alarmBtnSnooze: document.getElementById('alarm-btn-snooze'),
   alarmBtnDismiss: document.getElementById('alarm-btn-dismiss'),
-  alarmBtnJoin: document.getElementById('alarm-btn-join'),
   
   // Analytics
   completionPercentage: document.getElementById('completion-percentage'),
@@ -213,7 +207,6 @@ const DOM = {
   // Sidebar count badges
   badgeAll: document.getElementById('badge-all'),
   badgeTasks: document.getElementById('badge-tasks'),
-  badgeMeetings: document.getElementById('badge-meetings'),
   badgeUrgent: document.getElementById('badge-urgent'),
   greetingTitle: document.getElementById('greeting-title'),
   labelTimeStart: document.getElementById('label-time-start'),
@@ -357,7 +350,7 @@ function loadLocalOrMockData() {
   }
   if (savedData) {
     try {
-      state.events = JSON.parse(savedData);
+      state.events = JSON.parse(savedData).filter(event => event.type === 'task');
       return;
     } catch (error) {
       localStorage.removeItem(getScopedStorageKey('events'));
@@ -376,16 +369,13 @@ function loadMockData() {
     {
       id: 'mock-1',
       title: '🎯 Project Kickoff Sync',
-      type: 'meeting',
+      type: 'task',
       date: todayStr,
       startTime: '10:00',
-      endTime: '11:00',
       priority: 'high',
       category: 'work',
       description: 'Discuss scheduling app deliverables and design framework with stakeholders.',
       reminder: '5',
-      link: 'https://meet.google.com/abc-defg-hij',
-      location: 'Conference Room 3A',
       completed: false,
       dismissedAlarm: false
     },
@@ -546,12 +536,10 @@ function updateCountBadges() {
   
   const allCount = todaysEvents.length;
   const tasksCount = todaysEvents.filter(e => e.type === 'task').length;
-  const meetingsCount = todaysEvents.filter(e => e.type === 'meeting').length;
   const urgentCount = todaysEvents.filter(e => e.priority === 'high' && !e.completed).length;
   
   DOM.badgeAll.textContent = allCount;
   DOM.badgeTasks.textContent = tasksCount;
-  DOM.badgeMeetings.textContent = meetingsCount;
   DOM.badgeUrgent.textContent = urgentCount;
 }
 
@@ -614,7 +602,7 @@ function checkDelayAlertBanner() {
   
   if (overdueItems.length > 0) {
     DOM.delayAlertBanner.classList.remove('hidden');
-    DOM.delayAlertText.textContent = `You have ${overdueItems.length} overdue task(s) or meeting(s) past schedule!`;
+    DOM.delayAlertText.textContent = `You have ${overdueItems.length} overdue task(s) past schedule!`;
   } else {
     DOM.delayAlertBanner.classList.add('hidden');
   }
@@ -800,10 +788,6 @@ function renderDailyTimeline() {
     const eventsCell = row.querySelector('.timeline-events-cell');
     if (!eventsCell) return;
     
-    let durationLabel = '';
-    if (ev.type === 'meeting' && ev.endTime) {
-      durationLabel = ` - ${ev.endTime}`;
-    }
     
     // Draw event box
     const card = document.createElement('div');
@@ -891,8 +875,6 @@ function renderAgendaList() {
   
   if (state.activeFilter === 'tasks') {
     items = items.filter(e => e.type === 'task');
-  } else if (state.activeFilter === 'meetings') {
-    items = items.filter(e => e.type === 'meeting');
   } else if (state.activeFilter === 'urgent') {
     items = items.filter(e => e.priority === 'high' && !e.completed);
   }
@@ -996,21 +978,7 @@ function renderAgendaList() {
       `;
     }
     
-    // Meeting specific details
-    if (ev.type === 'meeting') {
-      if (ev.link) {
-        metaRow.innerHTML += `
-          <span class="meta-split"><i data-lucide="link"></i><a href="${ev.link}" target="_blank" style="color:var(--color-meeting);">Join Sync</a></span>
-        `;
-      }
-      if (ev.location) {
-        metaRow.innerHTML += `
-          <span class="meta-split"><i data-lucide="map-pin"></i>${ev.location}</span>
-        `;
-      }
-    }
-    
-    // Task Checklist stats
+    // Task checklist stats
     if (ev.type === 'task' && ev.subtasks && ev.subtasks.length > 0) {
       const doneSub = ev.subtasks.filter(s => s.completed).length;
       metaRow.innerHTML += `
@@ -1198,7 +1166,7 @@ function openFormModal(eventId = null) {
     const ev = state.events.find(e => e.id === eventId);
     if (!ev) return;
     
-    DOM.modalTitle.textContent = "Edit Scheduled Event";
+    DOM.modalTitle.textContent = "Edit Task";
     DOM.formItemId.value = ev.id;
     DOM.formItemType.value = ev.type;
     DOM.formTitle.value = ev.title;
@@ -1207,7 +1175,6 @@ function openFormModal(eventId = null) {
     DOM.formDuration.value = ev.duration || '';
     DOM.formRecurrence.value = 'none';
     DOM.formRecurrenceUntil.value = '';
-    DOM.formTimeEnd.value = ev.endTime || '';
     DOM.formPriority.value = ev.priority;
     DOM.formCategory.value = ev.category || 'work';
     DOM.formReminder.value = ev.reminder;
@@ -1215,8 +1182,6 @@ function openFormModal(eventId = null) {
       input.checked = (ev.reminders || []).includes(input.value);
     });
     DOM.formAlarmTone.value = ev.alarmTone || 'classic';
-    DOM.formMeetingLink.value = ev.link || '';
-    DOM.formMeetingLocation.value = ev.location || '';
     DOM.formDescription.value = ev.description || '';
     
     // Populate tab active classes
@@ -1240,9 +1205,9 @@ function openFormModal(eventId = null) {
     DOM.groupCompleted.style.display = 'flex';
     DOM.formCompleted.checked = ev.completed;
     const canEdit = canEditEvent(ev);
-    [DOM.formTitle, DOM.formDate, DOM.formTimeStart, DOM.formTimeEnd, DOM.formPriority,
+    [DOM.formTitle, DOM.formDate, DOM.formTimeStart, DOM.formPriority,
       DOM.formCategory, DOM.formReminder, DOM.formAlarmTone,
-      DOM.formDuration, DOM.formMeetingLink, DOM.formMeetingLocation, DOM.formDescription,
+      DOM.formDuration, DOM.formDescription,
       DOM.formCompleted, DOM.tabTask, DOM.btnAddSubtask].forEach(control => {
       if (control) control.disabled = !canEdit;
     });
@@ -1251,7 +1216,7 @@ function openFormModal(eventId = null) {
     if (!canEdit) showToast('This shared event is view-only.', 'info');
   } else {
     // Create mode
-    DOM.modalTitle.textContent = "Create Scheduled Event";
+    DOM.modalTitle.textContent = "Create Task";
     DOM.formItemId.value = '';
     DOM.formDate.value = getLocalDateString(state.currentDate);
     DOM.btnDeleteItem.classList.add('hidden');
@@ -1262,9 +1227,9 @@ function openFormModal(eventId = null) {
     DOM.groupCompleted.style.display = 'none';
     DOM.formCompleted.checked = false;
     DOM.btnSubmitForm.classList.remove('hidden');
-    [DOM.formTitle, DOM.formDate, DOM.formTimeStart, DOM.formTimeEnd, DOM.formPriority,
+    [DOM.formTitle, DOM.formDate, DOM.formTimeStart, DOM.formPriority,
       DOM.formCategory, DOM.formReminder, DOM.formAlarmTone,
-      DOM.formDuration, DOM.formMeetingLink, DOM.formMeetingLocation, DOM.formDescription,
+      DOM.formDuration, DOM.formDescription,
       DOM.formCompleted, DOM.tabTask, DOM.btnAddSubtask].forEach(control => {
       if (control) control.disabled = false;
     });
@@ -1287,9 +1252,7 @@ function closeFormModal() {
 function setFormTypeTab(type) {
   DOM.formItemType.value = 'task';
   DOM.tabTask.classList.add('active');
-  DOM.groupTimeEnd.style.display = 'none';
   DOM.groupPriority.style.display = 'flex';
-  DOM.groupMeetingDetails.style.display = 'none';
   DOM.groupSubtasks.style.display = 'flex';
   DOM.labelTimeStart.textContent = "Due Time";
 }
@@ -1376,33 +1339,6 @@ function validateForm() {
     DOM.formDate.parentElement.classList.remove('invalid');
   }
   
-  // Meeting specific verification
-  const isMeeting = DOM.formItemType.value === 'meeting';
-  if (isMeeting) {
-    // End time > Start Time
-    if (DOM.formTimeStart.value && DOM.formTimeEnd.value) {
-      if (DOM.formTimeStart.value >= DOM.formTimeEnd.value) {
-        DOM.formTimeEnd.parentElement.classList.add('invalid');
-        isValid = false;
-      } else {
-        DOM.formTimeEnd.parentElement.classList.remove('invalid');
-      }
-    }
-    
-    // Link validation (optional, only if typed)
-    if (DOM.formMeetingLink.value.trim()) {
-      try {
-        new URL(DOM.formMeetingLink.value.trim());
-        DOM.formMeetingLink.parentElement.classList.remove('invalid');
-      } catch (e) {
-        DOM.formMeetingLink.parentElement.classList.add('invalid');
-        isValid = false;
-      }
-    } else {
-      DOM.formMeetingLink.parentElement.classList.remove('invalid');
-    }
-  }
-  
   return isValid;
 }
 
@@ -1447,7 +1383,7 @@ function handleFormSubmit(e) {
   }
   
   const isEdit = !!state.editingEventId;
-  const itemType = DOM.formItemType.value;
+  const itemType = 'task';
   
   const eventData = {
     id: isEdit ? state.editingEventId : 'event-' + Date.now(),
@@ -1479,13 +1415,7 @@ function handleFormSubmit(e) {
     }
   }
   
-  if (itemType === 'task') {
-    eventData.subtasks = [...state.tempSubtasks];
-  } else {
-    eventData.endTime = DOM.formTimeEnd.value || null;
-    eventData.link = DOM.formMeetingLink.value.trim() || null;
-    eventData.location = DOM.formMeetingLocation.value.trim() || null;
-  }
+  eventData.subtasks = [...state.tempSubtasks];
 
   const existingEvent = isEdit ? state.events.find(ev => ev.id === state.editingEventId) : null;
   if (existingEvent && isSharedEvent(existingEvent)) {
@@ -1583,13 +1513,6 @@ function triggerAlarm(event, minutesBefore) {
   }
   DOM.alarmItemTime.textContent = labelTime;
   
-  // Connect video join links for meetings
-  if (event.type === 'meeting' && event.link) {
-    DOM.alarmBtnJoin.href = event.link;
-    DOM.alarmBtnJoin.classList.remove('hidden');
-  } else {
-    DOM.alarmBtnJoin.classList.add('hidden');
-  }
   
   // Show the visual and browser alarms independently so audio restrictions cannot suppress notifications.
   DOM.alarmAlertOverlay.classList.remove('hidden');
@@ -1737,9 +1660,9 @@ function handleImportFileSelect(e) {
       if (Array.isArray(parsed)) {
         const isValid = parsed.every(item => {
           if (!item || typeof item !== 'object' || !item.id || !item.title || !item.date) return false;
-          if (!['task', 'meeting'].includes(item.type) || typeof item.title !== 'string' || item.title.length > 200) return false;
+          if (item.type !== 'task' || typeof item.title !== 'string' || item.title.length > 200) return false;
           if (!/^\d{4}-\d{2}-\d{2}$/.test(item.date)) return false;
-          if (!Array.isArray(item.subtasks)) return item.type === 'meeting';
+          if (!Array.isArray(item.subtasks)) return false;
           return item.subtasks.every(subtask => subtask && typeof subtask.id === 'string'
             && typeof subtask.text === 'string' && subtask.text.trim() && subtask.text.length <= 250);
         });

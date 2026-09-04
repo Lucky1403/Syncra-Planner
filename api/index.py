@@ -428,7 +428,7 @@ def update_shared_event(current_user, event_id):
     required = ('id', 'type', 'title', 'date')
     if any(data.get(key) != getattr(event, key) for key in required[:1]):
         return jsonify({'message': 'Event ID cannot be changed'}), 400
-    if data.get('type') not in ('task', 'meeting') or not isinstance(data.get('title'), str) or not data['title'].strip() or len(data['title']) > 200:
+    if data.get('type') != 'task' or not isinstance(data.get('title'), str) or not data['title'].strip() or len(data['title']) > 200:
         return jsonify({'message': 'Invalid event payload'}), 400
     if not isinstance(data.get('date'), str) or len(data['date']) != 10:
         return jsonify({'message': 'Invalid event payload'}), 400
@@ -551,7 +551,7 @@ def sync_events(current_user):
         required = ('id', 'type', 'title', 'date')
         if not isinstance(event, dict) or any(not event.get(key) for key in required):
             return False
-        if event['type'] not in ('task', 'meeting'):
+        if event['type'] != 'task':
             return False
         if not isinstance(event['id'], str) or len(event['id']) > 50:
             return False

@@ -3,18 +3,18 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Syncra Planner - Task & Meeting Scheduler</title>
+  <title>Syncra Planner - Focused Task Planner</title>
   <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&display=swap" rel="stylesheet">
   <!-- Lucide Icons CDN -->
   <script src="https://unpkg.com/lucide@latest"></script>
   <!-- Main Stylesheet -->
   <link rel="stylesheet" href="styles.css?v=8">
   <!-- PWA Manifest & Mobile Icons -->
   <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#080b12">
+  <meta name="theme-color" content="#f5f1ea">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <link rel="apple-touch-icon" href="icon.svg">
@@ -68,11 +68,6 @@
           <i data-lucide="check-square"></i>
           <span>Tasks Only</span>
           <span class="badge badge-purple" id="badge-tasks">0</span>
-        </button>
-        <button class="nav-item filter-btn" data-filter="meetings">
-          <i data-lucide="video"></i>
-          <span>Meetings Only</span>
-          <span class="badge badge-cyan" id="badge-meetings">0</span>
         </button>
         <button class="nav-item filter-btn" data-filter="urgent">
           <i data-lucide="alert-triangle"></i>
@@ -259,11 +254,11 @@
 
   </div>
 
-  <!-- Form Modal (Add / Edit Schedule Event) -->
+  <!-- Form Modal (Add / Edit Task) -->
   <div class="modal-overlay hidden" id="modal-event-form">
     <div class="modal-card">
       <div class="modal-header">
-        <h2 id="modal-title">Create Schedule Event</h2>
+        <h2 id="modal-title">Create Task</h2>
         <button class="modal-close" id="modal-form-close"><i data-lucide="x"></i></button>
       </div>
       
@@ -277,11 +272,11 @@
       <form class="event-form" id="event-creation-form" novalidate>
         <!-- Hidden Inputs for editing -->
         <input type="hidden" id="form-item-id" value="">
-        <input type="hidden" id="form-item-type" value="task"> <!-- task or meeting -->
+        <input type="hidden" id="form-item-type" value="task">
 
         <div class="form-group span-full">
           <label for="form-title">Title <span class="required">*</span></label>
-          <input type="text" id="form-title" placeholder="e.g., Weekly Sync or Submit Report" required autocomplete="off">
+          <input type="text" id="form-title" placeholder="e.g., Submit project report" required autocomplete="off">
           <span class="error-message" id="error-title">Title is required.</span>
         </div>
 
@@ -302,14 +297,6 @@
             <input type="number" id="form-duration" min="1" max="1440" placeholder="30">
           </div>
 
-          <!-- Meeting specific: End Time -->
-          <div class="form-group" id="group-time-end">
-            <label for="form-time-end">End Time</label>
-            <input type="time" id="form-time-end">
-            <span class="error-message" id="error-time-end">End time must be after start time.</span>
-          </div>
-
-          <!-- Task specific: Priority -->
           <div class="form-group" id="group-priority">
             <label for="form-priority">Priority</label>
             <select id="form-priority">
@@ -382,22 +369,6 @@
           </div>
         </div>
 
-        <!-- Meeting specific: Link & Location -->
-        <div class="form-group span-full" id="group-meeting-details">
-          <label for="form-meeting-link">Meeting URL / Link</label>
-          <div class="input-with-icon">
-            <i data-lucide="link"></i>
-            <input type="url" id="form-meeting-link" placeholder="https://meet.google.com/abc-defg-hij">
-          </div>
-          <span class="error-message" id="error-link">Please enter a valid URL.</span>
-
-          <label for="form-meeting-location" style="margin-top: 12px;">Physical Location (Optional)</label>
-          <div class="input-with-icon">
-            <i data-lucide="map-pin"></i>
-            <input type="text" id="form-meeting-location" placeholder="Conference Room A, Office">
-          </div>
-        </div>
-
         <div class="form-group span-full hidden" id="group-sharing">
           <label>Share Event</label>
           <div class="subtask-input-row">
@@ -438,7 +409,7 @@
         <div class="modal-footer span-full">
           <button type="button" class="btn btn-secondary" id="btn-cancel-form">Cancel</button>
           <button type="button" class="btn btn-danger hidden" id="btn-delete-item">Delete</button>
-          <button type="submit" class="btn btn-primary" id="btn-submit-form">Save Event</button>
+          <button type="submit" class="btn btn-primary" id="btn-submit-form">Save Task</button>
         </div>
       </form>
     </div>
@@ -451,7 +422,7 @@
         <i data-lucide="bell-ring"></i>
       </div>
       <h2>REMINDER ALARM</h2>
-      <div class="alarm-item-type" id="alarm-item-type">MEETING</div>
+      <div class="alarm-item-type" id="alarm-item-type">TASK</div>
       <div class="alarm-item-title" id="alarm-item-title">Product Alignment Sync</div>
       <div class="alarm-item-time" id="alarm-item-time">Starts in 5 minutes (15:00)</div>
       
@@ -467,11 +438,6 @@
         </button>
       </div>
       
-      <!-- Optional: Join meeting button -->
-      <a href="#" target="_blank" class="btn btn-lg btn-success hidden" id="alarm-btn-join">
-        <i data-lucide="external-link"></i>
-        <span>Join Meeting Now</span>
-      </a>
     </div>
   </div>
 
