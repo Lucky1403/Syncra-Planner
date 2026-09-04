@@ -1240,7 +1240,7 @@ body {
 /* Modal Tabs */
 .modal-tabs {
   display: flex;
-  width: 50%;
+  width: 100%;
   background: rgba(0, 0, 0, 0.2);
   padding: 4px;
   border-radius: var(--border-radius-md);
