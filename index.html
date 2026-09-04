@@ -332,14 +332,20 @@
 
           <div class="form-group">
             <label for="form-alarm-tone">Alarm Tone</label>
-            <select id="form-alarm-tone">
-              <option value="classic">Classic Chime</option>
-              <option value="bright">Bright Three-Tone</option>
-              <option value="soft">Soft Reminder</option>
-              <option value="urgent">Urgent Alert</option>
-              <option value="digital">Digital Pulse</option>
-              <option value="calm">Calm Rising</option>
-            </select>
+            <div class="alarm-tone-control">
+              <select id="form-alarm-tone">
+                <option value="classic">Classic Chime</option>
+                <option value="bright">Bright Three-Tone</option>
+                <option value="soft">Soft Reminder</option>
+                <option value="urgent">Urgent Alert</option>
+                <option value="digital">Digital Pulse</option>
+                <option value="calm">Calm Rising</option>
+              </select>
+              <button type="button" class="btn btn-secondary tone-preview-btn" id="btn-preview-tone" title="Preview selected alarm tone" aria-label="Preview selected alarm tone">
+                <i data-lucide="volume-2"></i>
+                <span>Preview</span>
+              </button>
+            </div>
           </div>
 
           <div class="form-group">

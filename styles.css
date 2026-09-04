@@ -1306,6 +1306,23 @@ body {
   color: var(--color-high);
 }
 
+.alarm-tone-control {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: stretch;
+}
+
+.tone-preview-btn {
+  min-width: 104px;
+  padding-inline: 12px;
+}
+
+.tone-preview-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
 .form-group input,
 .form-group select,
 .form-group textarea {

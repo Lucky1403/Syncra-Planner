@@ -162,6 +162,7 @@ const DOM = {
   formReminder: document.getElementById('form-reminder'),
   formAdditionalReminders: document.getElementById('form-additional-reminders'),
   formAlarmTone: document.getElementById('form-alarm-tone'),
+  btnPreviewTone: document.getElementById('btn-preview-tone'),
   formDuration: document.getElementById('form-duration'),
   formRecurrence: document.getElementById('form-recurrence'),
   formRecurrenceUntil: document.getElementById('form-recurrence-until'),
@@ -1517,7 +1518,9 @@ function triggerAlarm(event, minutesBefore) {
   // Show the visual and browser alarms independently so audio restrictions cannot suppress notifications.
   DOM.alarmAlertOverlay.classList.remove('hidden');
   try {
-    sendBrowserNotification(event, labelTime);
+    sendBrowserNotification(event, labelTime).catch(error => {
+      console.warn('Browser notification could not be shown:', error);
+    });
   } catch (error) {
     console.warn('Browser notification could not be shown:', error);
   }
@@ -1613,7 +1616,7 @@ function toggleNotificationsPermission() {
   }
 }
 
-function sendBrowserNotification(event, description) {
+async function sendBrowserNotification(event, description) {
   if (!("Notification" in window) || Notification.permission !== "granted") return;
   
   const title = `Syncra Alarm: ${event.title}`;
@@ -1621,8 +1624,15 @@ function sendBrowserNotification(event, description) {
     body: description,
     icon: 'icon.svg',
     requireInteraction: true,
-    tag: event.id
+    tag: event.id,
+    data: { url: './index.html', eventId: event.id }
   };
+
+  if ('serviceWorker' in navigator) {
+    const registration = await navigator.serviceWorker.ready;
+    await registration.showNotification(title, options);
+    return;
+  }
   
   const notification = new Notification(title, options);
   notification.onclick = function() {
@@ -1856,6 +1866,7 @@ function setupEventListeners() {
   
   DOM.tabTask.addEventListener('click', () => setFormTypeTab('task'));
   DOM.formAlarmTone.addEventListener('change', () => playAlarmChimeSequence(DOM.formAlarmTone.value));
+  DOM.btnPreviewTone.addEventListener('click', () => playAlarmChimeSequence(DOM.formAlarmTone.value));
   
   DOM.btnAddSubtask.addEventListener('click', addSubtaskFromInput);
   DOM.formNewSubtask.addEventListener('keypress', (e) => {
