@@ -157,12 +157,6 @@ const DOM = {
   formTitle: document.getElementById('form-title'),
   formDate: document.getElementById('form-date'),
   formTimeStart: document.getElementById('form-time-start'),
-  // Time picker elements
-  timePickerHour: document.getElementById('time-picker-hour'),
-  timePickerMinute: document.getElementById('time-picker-minute'),
-  hourInput: document.getElementById('hour-input'),
-  minuteInput: document.getElementById('minute-input'),
-  timeSetBtn: document.getElementById('time-set-btn'),
   formPriority: document.getElementById('form-priority'),
   formCategory: document.getElementById('form-category'),
   formReminder: document.getElementById('form-reminder'),
@@ -295,21 +289,10 @@ function init() {
   // Check auth session
   updateAuthUI();
   
-  // Load data first (synchronously for local, or start async for backend)
   if (state.userToken) {
-    // For logged-in users, try to load local cache first, then sync from backend
-    const savedData = localStorage.getItem(getScopedStorageKey('events'));
-    if (savedData) {
-      try {
-        state.events = JSON.parse(savedData);
-      } catch (error) {
-        console.error('Failed to parse cached events:', error);
-      }
-    }
-    // Then fetch fresh data from backend
+    // Fetch user data from centralized MySQL database
     syncEventsFromBackend();
   } else {
-    // Load local or mock data for logged-out users
     loadLocalOrMockData();
   }
 
@@ -1258,9 +1241,6 @@ function openFormModal(eventId = null) {
     setFormTypeTab('task');
   }
   
-  // Initialize time picker with current value or now time
-  initializeTimePicker(DOM.formTimeStart.value);
-  
   // Re-bind Lucide icons in modal
   lucide.createIcons();
 }
@@ -1276,69 +1256,6 @@ function setFormTypeTab(type) {
   DOM.groupPriority.style.display = 'flex';
   DOM.groupSubtasks.style.display = 'flex';
   DOM.labelTimeStart.textContent = "Due Time";
-}
-
-// Time Picker Functions
-function updateTimePickerFromSlider() {
-  const hours = parseInt(DOM.timePickerHour.value) || 0;
-  const minutes = parseInt(DOM.timePickerMinute.value) || 0;
-  
-  // Update input fields
-  DOM.hourInput.value = String(hours).padStart(2, '0');
-  DOM.minuteInput.value = String(minutes).padStart(2, '0');
-  
-  // Visual update - position the slider thumbs based on time
-  const hourPercent = (hours / 23) * 100;
-  const minutePercent = (minutes / 59) * 100;
-  
-  DOM.timePickerHour.style.setProperty('--value', hourPercent);
-  DOM.timePickerMinute.style.setProperty('--value', minutePercent);
-}
-
-function updateTimePickerFromInput() {
-  let hours = parseInt(DOM.hourInput.value) || 0;
-  let minutes = parseInt(DOM.minuteInput.value) || 0;
-  
-  // Validate and constrain
-  hours = Math.max(0, Math.min(23, hours));
-  minutes = Math.max(0, Math.min(59, minutes));
-  
-  // Update inputs with validated values
-  DOM.hourInput.value = String(hours).padStart(2, '0');
-  DOM.minuteInput.value = String(minutes).padStart(2, '0');
-  
-  // Update sliders
-  DOM.timePickerHour.value = hours;
-  DOM.timePickerMinute.value = minutes;
-  
-  updateTimePickerFromSlider();
-}
-
-function applyTimePickerValue() {
-  const hours = String(DOM.hourInput.value).padStart(2, '0');
-  const minutes = String(DOM.minuteInput.value).padStart(2, '0');
-  const timeValue = `${hours}:${minutes}`;
-  
-  DOM.formTimeStart.value = timeValue;
-}
-
-function initializeTimePicker(timeString = '') {
-  if (timeString) {
-    const [hours, minutes] = timeString.split(':').map(v => parseInt(v) || 0);
-    DOM.timePickerHour.value = hours;
-    DOM.timePickerMinute.value = minutes;
-    DOM.hourInput.value = String(hours).padStart(2, '0');
-    DOM.minuteInput.value = String(minutes).padStart(2, '0');
-  } else {
-    const now = new Date();
-    const hours = now.getHours();
-    const minutes = now.getMinutes();
-    DOM.timePickerHour.value = hours;
-    DOM.timePickerMinute.value = minutes;
-    DOM.hourInput.value = String(hours).padStart(2, '0');
-    DOM.minuteInput.value = String(minutes).padStart(2, '0');
-  }
-  updateTimePickerFromSlider();
 }
 
 // Subtasks list handling in modal form
@@ -1549,8 +1466,7 @@ function checkAlarms() {
   
   state.events.forEach(ev => {
     if (ev.completed || !ev.startTime) return;
-    // If event alarm is dismissed, skip checking it
-    if (ev.dismissedAlarm === true) return;
+    if (ev.dismissedAlarm && !ev.triggeredReminders) return;
     if (ev.date !== todayStr) return;
     
     const reminderOffsets = ev.reminders && ev.reminders.length > 0
@@ -1629,10 +1545,9 @@ function dismissAlarm(isSnooze = false) {
         ev.snoozedUntil = snoozeDate.getTime();
         showToast(`Alarm for "${ev.title}" snoozed for 5 minutes.`, "info");
       } else {
-        // Fully dismissed - mark this reminder as triggered so it won't repeat
+        // Fully dismissed
         ev.triggeredReminders = [...new Set([...(ev.triggeredReminders || []), String(state.activeAlarmReminder)])];
-        // Mark the entire event alarm as dismissed to prevent future alarms today
-        ev.dismissedAlarm = true;
+        ev.dismissedAlarm = false;
         ev.snoozedUntil = null;
         showToast(`Alarm for "${ev.title}" dismissed.`, "success");
       }
@@ -1952,13 +1867,6 @@ function setupEventListeners() {
   DOM.tabTask.addEventListener('click', () => setFormTypeTab('task'));
   DOM.formAlarmTone.addEventListener('change', () => playAlarmChimeSequence(DOM.formAlarmTone.value));
   DOM.btnPreviewTone.addEventListener('click', () => playAlarmChimeSequence(DOM.formAlarmTone.value));
-  
-  // Time Picker Event Listeners
-  DOM.timePickerHour.addEventListener('input', updateTimePickerFromSlider);
-  DOM.timePickerMinute.addEventListener('input', updateTimePickerFromSlider);
-  DOM.hourInput.addEventListener('input', updateTimePickerFromInput);
-  DOM.minuteInput.addEventListener('input', updateTimePickerFromInput);
-  DOM.timeSetBtn.addEventListener('click', applyTimePickerValue);
   
   DOM.btnAddSubtask.addEventListener('click', addSubtaskFromInput);
   DOM.formNewSubtask.addEventListener('keypress', (e) => {

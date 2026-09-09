@@ -287,34 +287,9 @@
             <span class="error-message" id="error-date">Date is required.</span>
           </div>
 
-          <div class="form-group time-picker-wrapper">
+          <div class="form-group">
             <label for="form-time-start" id="label-time-start">Time</label>
-            <div class="time-picker-container">
-              <input type="time" id="form-time-start" class="time-input-hidden">
-              <div class="time-picker-display">
-                <div class="time-clock">
-                  <div class="clock-face">
-                    <div class="clock-center"></div>
-                    <input type="range" id="time-picker-hour" class="time-slider hour-slider" min="0" max="23" value="12">
-                    <input type="range" id="time-picker-minute" class="time-slider minute-slider" min="0" max="59" value="0">
-                  </div>
-                </div>
-                <div class="time-display">
-                  <div class="time-input-group">
-                    <div class="time-value-box">
-                      <input type="number" id="hour-input" class="hour-input" min="0" max="23" placeholder="00">
-                      <span class="time-label">Hour</span>
-                    </div>
-                    <span class="time-separator">:</span>
-                    <div class="time-value-box">
-                      <input type="number" id="minute-input" class="minute-input" min="0" max="59" placeholder="00">
-                      <span class="time-label">Minute</span>
-                    </div>
-                  </div>
-                  <button type="button" class="btn btn-primary time-set-btn" id="time-set-btn">Set</button>
-                </div>
-              </div>
-            </div>
+            <input type="time" id="form-time-start">
           </div>
 
           <div class="form-group">
