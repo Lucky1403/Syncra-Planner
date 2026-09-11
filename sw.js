@@ -2,11 +2,11 @@
    Syncra Task Scheduler - PWA Service Worker
    ========================================================================== */
 
-const CACHE_NAME = 'syncra-planner-cache-v12';
+const CACHE_NAME = 'syncra-planner-cache-v13';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
-  './styles.css?v=12',
+  './styles.css?v=13',
   './app.js?v=12',
   './manifest.json',
   './icon.svg'
