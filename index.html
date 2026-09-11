@@ -14,7 +14,7 @@
   <!-- Lucide Icons CDN -->
   <script src="https://unpkg.com/lucide@latest"></script>
   <!-- Main Stylesheet -->
-  <link rel="stylesheet" href="styles.css?v=14">
+  <link rel="stylesheet" href="styles.css?v=15">
   <!-- PWA Manifest & Mobile Icons -->
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#f5f1ea">
@@ -143,27 +143,47 @@
       <!-- Top Header -->
       <header class="main-header">
         <div class="header-left">
-          <h2 id="greeting-title">Hello there!</h2>
+          <div class="header-greeting-container">
+            <h2 id="greeting-title">Hello there!</h2>
+            <div class="mobile-live-clock" id="mobile-live-clock" title="Current time and date">
+              <i data-lucide="clock" class="mobile-clock-icon"></i>
+              <span class="mobile-time-text" id="mobile-live-time">12:00 AM</span>
+              <span class="mobile-clock-divider">•</span>
+              <span class="mobile-date-text" id="mobile-live-date">Today</span>
+            </div>
+          </div>
           <p id="header-subtitle">Plan your agenda and stay ahead of the schedule.</p>
         </div>
         <div class="header-right">
-          <input class="custom-select" id="agenda-search" type="search" placeholder="Search agenda..."
-            aria-label="Search agenda">
-          <!-- Notification Status Button -->
-          <button class="header-action-btn" id="btn-toggle-notifications" title="Enable System Notifications">
-            <i data-lucide="bell"></i>
-            <span class="status-indicator warning" id="notification-status-dot"></span>
-          </button>
+          <div class="header-search-wrap">
+            <input class="custom-select" id="agenda-search" type="search" placeholder="Search agenda..."
+              aria-label="Search agenda">
+          </div>
 
-          <!-- Calendar Month/Year selector -->
-          <div class="calendar-navigator">
-            <button class="nav-arrow" id="cal-prev" title="Previous Month">
-              <i data-lucide="chevron-left"></i>
-            </button>
-            <span class="current-month-year" id="cal-current-label">July 2026</span>
-            <button class="nav-arrow" id="cal-next" title="Next Month">
-              <i data-lucide="chevron-right"></i>
-            </button>
+          <div class="header-controls-row">
+            <!-- Calendar Month/Year selector -->
+            <div class="calendar-navigator">
+              <button class="nav-arrow" id="cal-prev" title="Previous Month">
+                <i data-lucide="chevron-left"></i>
+              </button>
+              <span class="current-month-year" id="cal-current-label">July 2026</span>
+              <button class="nav-arrow" id="cal-next" title="Next Month">
+                <i data-lucide="chevron-right"></i>
+              </button>
+            </div>
+
+            <div class="header-buttons-group">
+              <!-- Notification Status Button -->
+              <button class="header-action-btn" id="btn-toggle-notifications" title="Enable System Notifications">
+                <i data-lucide="bell"></i>
+                <span class="status-indicator warning" id="notification-status-dot"></span>
+              </button>
+
+              <!-- Mobile Menu / Profile Button -->
+              <button class="header-action-btn mobile-menu-btn" id="btn-mobile-menu" title="Menu & Profile" aria-label="Menu & Profile">
+                <i data-lucide="menu"></i>
+              </button>
+            </div>
           </div>
         </div>
       </header>
@@ -537,11 +557,126 @@
       <i data-lucide="layers"></i>
       <span>Agenda</span>
     </button>
-    <button class="mobile-nav-item" id="mobile-btn-backup">
-      <i data-lucide="download"></i>
-      <span>Backup</span>
+    <button class="mobile-nav-item" id="mobile-btn-more" title="More options & profile">
+      <i data-lucide="more-horizontal"></i>
+      <span>More</span>
     </button>
   </nav>
+
+  <!-- Mobile Slide-Over Drawer Overlay -->
+  <div class="mobile-drawer-overlay hidden" id="mobile-drawer-overlay" role="dialog" aria-modal="true" aria-label="Menu and profile">
+    <div class="mobile-drawer-backdrop" id="mobile-drawer-backdrop"></div>
+    <div class="mobile-drawer-content">
+      <div class="mobile-drawer-header">
+        <div class="sidebar-brand">
+          <div class="brand-logo"><i data-lucide="sparkles"></i></div>
+          <span>Syncra</span>
+        </div>
+        <button class="modal-close" id="btn-close-mobile-drawer" title="Close menu" aria-label="Close menu">
+          <i data-lucide="x"></i>
+        </button>
+      </div>
+
+      <!-- Live Clock inside Drawer -->
+      <div class="clock-widget mobile-drawer-clock">
+        <div class="time-display-wrapper">
+          <h1 class="live-time-val" id="drawer-live-time">12:00 AM</h1>
+          <p class="live-date-val" id="drawer-live-date">Today</p>
+        </div>
+      </div>
+
+      <!-- Quick Task Create -->
+      <button class="btn btn-primary add-item-btn" id="drawer-btn-add-item" style="width: 100%; margin-bottom: 16px;">
+        <i data-lucide="plus"></i>
+        <span>Schedule New</span>
+      </button>
+
+      <!-- Filters Section -->
+      <div class="drawer-section">
+        <h4 class="drawer-section-title">Views & Filters</h4>
+        <div class="drawer-filters-list">
+          <button class="drawer-filter-btn active" data-filter="all">
+            <div class="filter-btn-left">
+              <i data-lucide="layers"></i>
+              <span>All Items</span>
+            </div>
+            <span class="badge" id="drawer-badge-all">0</span>
+          </button>
+          <button class="drawer-filter-btn" data-filter="task">
+            <div class="filter-btn-left">
+              <i data-lucide="check-square"></i>
+              <span>Tasks Only</span>
+            </div>
+            <span class="badge" id="drawer-badge-tasks">0</span>
+          </button>
+          <button class="drawer-filter-btn" data-filter="high">
+            <div class="filter-btn-left">
+              <i data-lucide="alert-triangle"></i>
+              <span>High Priority</span>
+            </div>
+            <span class="badge" id="drawer-badge-urgent">0</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Daily Status Analytics -->
+      <div class="drawer-section">
+        <h4 class="drawer-section-title">Daily Status (<span id="drawer-completion-percentage">0%</span>)</h4>
+        <div class="stats-progress-container" style="margin-bottom: 8px;">
+          <div class="progress-bar-fill" id="drawer-stats-progress-bar" style="width: 0%;"></div>
+        </div>
+        <div class="stats-grid">
+          <div class="stat-box">
+            <span class="stat-val" id="drawer-stat-completed">0</span>
+            <span class="stat-lbl">Done</span>
+          </div>
+          <div class="stat-box">
+            <span class="stat-val" id="drawer-stat-pending">0</span>
+            <span class="stat-lbl">Pending</span>
+          </div>
+          <div class="stat-box warning">
+            <span class="stat-val" id="drawer-stat-delay-risk">0</span>
+            <span class="stat-lbl">Delay Risk</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Backup & Restore -->
+      <div class="drawer-section">
+        <h4 class="drawer-section-title">Backup & Storage</h4>
+        <div class="drawer-action-row">
+          <button class="footer-btn" id="drawer-btn-export" title="Export Schedule Backup">
+            <i data-lucide="download"></i>
+            <span>Backup</span>
+          </button>
+          <button class="footer-btn" id="drawer-btn-import" title="Import Schedule Backup">
+            <i data-lucide="upload"></i>
+            <span>Restore</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- User Profile & Account -->
+      <div class="drawer-section drawer-user-section">
+        <div class="sidebar-user-section"
+          style="padding: 10px 14px; background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); border-radius: var(--border-radius-md); display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+          <div style="min-width: 0; display: flex; align-items: center; gap: 8px; flex-grow: 1;">
+            <i data-lucide="user" style="width: 14px; height: 14px; color: var(--color-primary); flex-shrink: 0;"></i>
+            <span id="drawer-user-email-display"
+              style="font-size: 11px; color: var(--text-dark); text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">guest@syncra.com</span>
+          </div>
+          <button id="drawer-btn-logout" title="Log Out"
+            style="background: transparent; border: none; color: var(--text-dark); cursor: pointer; display: flex; align-items: center; padding: 4px; border-radius: var(--border-radius-sm); transition: color var(--transition-fast);">
+            <i data-lucide="log-out" style="width: 14px; height: 14px;"></i>
+          </button>
+        </div>
+        <div class="sidebar-user-actions" style="margin-top: 8px;">
+          <button class="footer-btn" id="drawer-btn-change-password" type="button">Change Password</button>
+          <button class="footer-btn" id="drawer-btn-delete-account" type="button">Delete Account</button>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <!-- Futuristic Glassmorphic Auth Overlay -->
   <div class="auth-overlay" id="auth-overlay">
@@ -579,7 +714,7 @@
   </div>
 
   <!-- Scripts -->
-  <script src="app.js?v=14"></script>
+  <script src="app.js?v=15"></script>
 </body>
 
 </html>

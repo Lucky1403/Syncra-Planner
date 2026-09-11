@@ -557,11 +557,22 @@ function startLiveClock() {
       lastLiveDate = liveDate;
     }
     // 12 Hour Format for live-time
-    DOM.liveTime.textContent = formatDateTimeTo12(now);
+    const timeFormatted = formatDateTimeTo12(now);
+    const dateFormatted = now.toLocaleDateString('en-US', { weekday: 'short', month: 'long', day: 'numeric', year: 'numeric' });
+    const mobileDateFormatted = now.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 
-    // Custom formatted date
-    const options = { weekday: 'short', month: 'long', day: 'numeric', year: 'numeric' };
-    DOM.liveDate.textContent = now.toLocaleDateString('en-US', options);
+    if (DOM.liveTime) DOM.liveTime.textContent = timeFormatted;
+    if (DOM.liveDate) DOM.liveDate.textContent = dateFormatted;
+
+    const mobileLiveTime = document.getElementById('mobile-live-time');
+    const mobileLiveDate = document.getElementById('mobile-live-date');
+    if (mobileLiveTime) mobileLiveTime.textContent = timeFormatted;
+    if (mobileLiveDate) mobileLiveDate.textContent = mobileDateFormatted;
+
+    const drawerLiveTime = document.getElementById('drawer-live-time');
+    const drawerLiveDate = document.getElementById('drawer-live-date');
+    if (drawerLiveTime) drawerLiveTime.textContent = timeFormatted;
+    if (drawerLiveDate) drawerLiveDate.textContent = dateFormatted;
   }
 
   tick();
@@ -609,6 +620,14 @@ function updateCountBadges() {
   DOM.badgeAll.textContent = allCount;
   DOM.badgeTasks.textContent = tasksCount;
   DOM.badgeUrgent.textContent = urgentCount;
+
+  // Sync mobile drawer badges
+  const drawerBadgeAll = document.getElementById('drawer-badge-all');
+  const drawerBadgeTasks = document.getElementById('drawer-badge-tasks');
+  const drawerBadgeUrgent = document.getElementById('drawer-badge-urgent');
+  if (drawerBadgeAll) drawerBadgeAll.textContent = allCount;
+  if (drawerBadgeTasks) drawerBadgeTasks.textContent = tasksCount;
+  if (drawerBadgeUrgent) drawerBadgeUrgent.textContent = urgentCount;
 }
 
 
@@ -632,6 +651,18 @@ function updateAnalytics() {
   DOM.statCompleted.textContent = completed;
   DOM.statPending.textContent = pending;
   DOM.statDelayRisk.textContent = delayRisk;
+
+  // Sync mobile drawer daily status
+  const drawerPct = document.getElementById('drawer-completion-percentage');
+  const drawerBar = document.getElementById('drawer-stats-progress-bar');
+  const drawerCompleted = document.getElementById('drawer-stat-completed');
+  const drawerPending = document.getElementById('drawer-stat-pending');
+  const drawerDelayRisk = document.getElementById('drawer-stat-delay-risk');
+  if (drawerPct) drawerPct.textContent = `${pct}%`;
+  if (drawerBar) drawerBar.style.width = `${pct}%`;
+  if (drawerCompleted) drawerCompleted.textContent = completed;
+  if (drawerPending) drawerPending.textContent = pending;
+  if (drawerDelayRisk) drawerDelayRisk.textContent = delayRisk;
 }
 
 // Delay Risk helper
@@ -2136,10 +2167,109 @@ function setupEventListeners() {
     });
   }
 
-  const mobileBtnBackup = document.getElementById('mobile-btn-backup');
-  if (mobileBtnBackup) {
-    mobileBtnBackup.addEventListener('click', () => {
+  // Mobile Slide-Over Drawer Controls
+  function openMobileDrawer() {
+    const drawer = document.getElementById('mobile-drawer-overlay');
+    if (drawer) {
+      drawer.classList.remove('hidden');
+      if (window.lucide) window.lucide.createIcons();
+    }
+  }
+
+  function closeMobileDrawer() {
+    const drawer = document.getElementById('mobile-drawer-overlay');
+    if (drawer) {
+      drawer.classList.add('hidden');
+    }
+  }
+
+  const btnMobileMenu = document.getElementById('btn-mobile-menu');
+  if (btnMobileMenu) {
+    btnMobileMenu.addEventListener('click', openMobileDrawer);
+  }
+
+  const mobileBtnMore = document.getElementById('mobile-btn-more');
+  if (mobileBtnMore) {
+    mobileBtnMore.addEventListener('click', openMobileDrawer);
+  }
+
+  const btnCloseMobileDrawer = document.getElementById('btn-close-mobile-drawer');
+  if (btnCloseMobileDrawer) {
+    btnCloseMobileDrawer.addEventListener('click', closeMobileDrawer);
+  }
+
+  const mobileDrawerBackdrop = document.getElementById('mobile-drawer-backdrop');
+  if (mobileDrawerBackdrop) {
+    mobileDrawerBackdrop.addEventListener('click', closeMobileDrawer);
+  }
+
+  const drawerBtnAddItem = document.getElementById('drawer-btn-add-item');
+  if (drawerBtnAddItem) {
+    drawerBtnAddItem.addEventListener('click', () => {
+      closeMobileDrawer();
+      openFormModal();
+    });
+  }
+
+  // Drawer quick filters
+  document.querySelectorAll('.drawer-filter-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const filter = e.currentTarget.dataset.filter;
+      state.activeFilter = filter;
+      document.querySelectorAll('.drawer-filter-btn').forEach(b => b.classList.remove('active'));
+      e.currentTarget.classList.add('active');
+      // Also sync desktop sidebar filter-btn active class
+      document.querySelectorAll('.filter-btn').forEach(b => {
+        b.classList.toggle('active', b.dataset.filter === filter || (filter === 'all' && b.dataset.filter === 'all') || (filter === 'task' && b.dataset.filter === 'tasks') || (filter === 'high' && b.dataset.filter === 'urgent'));
+      });
+      closeMobileDrawer();
+      renderApp();
+    });
+  });
+
+  // Drawer backup and restore
+  const drawerBtnExport = document.getElementById('drawer-btn-export');
+  if (drawerBtnExport) {
+    drawerBtnExport.addEventListener('click', () => {
+      closeMobileDrawer();
       exportScheduleBackup();
+    });
+  }
+
+  const drawerBtnImport = document.getElementById('drawer-btn-import');
+  if (drawerBtnImport) {
+    drawerBtnImport.addEventListener('click', () => {
+      closeMobileDrawer();
+      const importFile = document.getElementById('import-file');
+      if (importFile) importFile.click();
+    });
+  }
+
+  // Drawer User Profile actions
+  const drawerBtnLogout = document.getElementById('drawer-btn-logout');
+  if (drawerBtnLogout) {
+    drawerBtnLogout.addEventListener('click', () => {
+      closeMobileDrawer();
+      const btnLogout = document.getElementById('btn-logout');
+      if (btnLogout) btnLogout.click();
+    });
+  }
+
+  const drawerBtnChangePassword = document.getElementById('drawer-btn-change-password');
+  if (drawerBtnChangePassword) {
+    drawerBtnChangePassword.addEventListener('click', () => {
+      closeMobileDrawer();
+      const btnChangePassword = document.getElementById('btn-change-password');
+      if (btnChangePassword) btnChangePassword.click();
+    });
+  }
+
+  const drawerBtnDeleteAccount = document.getElementById('drawer-btn-delete-account');
+  if (drawerBtnDeleteAccount) {
+    drawerBtnDeleteAccount.addEventListener('click', () => {
+      closeMobileDrawer();
+      const btnDeleteAccount = document.getElementById('btn-delete-account');
+      if (btnDeleteAccount) btnDeleteAccount.click();
     });
   }
 
@@ -2538,6 +2668,10 @@ function updateAuthUI() {
     }
     if (DOM.userEmailDisplay) {
       DOM.userEmailDisplay.textContent = state.userEmail;
+    }
+    const drawerUserEmail = document.getElementById('drawer-user-email-display');
+    if (drawerUserEmail) {
+      drawerUserEmail.textContent = state.userEmail;
     }
   } else {
     showAuthOverlay();
