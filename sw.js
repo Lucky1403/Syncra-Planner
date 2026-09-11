@@ -2,12 +2,12 @@
    Syncra Task Scheduler - PWA Service Worker
    ========================================================================== */
 
-const CACHE_NAME = 'syncra-planner-cache-v9';
+const CACHE_NAME = 'syncra-planner-cache-v12';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
-  './styles.css?v=8',
-  './app.js?v=8',
+  './styles.css?v=12',
+  './app.js?v=12',
   './manifest.json',
   './icon.svg'
 ];
@@ -40,22 +40,27 @@ self.addEventListener('activate', (e) => {
   );
 });
 
-// Fetch Event - Serve Cache First, fallback to Network
+// Fetch Event - Network First with Cache Fallback
 self.addEventListener('fetch', (e) => {
+  if (e.request.method !== 'GET') return;
   e.respondWith(
-    caches.match(e.request).then((cachedResponse) => {
-      if (cachedResponse) {
-        return cachedResponse;
+    fetch(e.request).then((networkResponse) => {
+      if (networkResponse && networkResponse.status === 200) {
+        const responseToCache = networkResponse.clone();
+        caches.open(CACHE_NAME).then((cache) => {
+          cache.put(e.request, responseToCache);
+        });
       }
-      return fetch(e.request).then((networkResponse) => {
-        // Cache newly fetched assets dynamically (optional, but keep it simple for now)
-        return networkResponse;
-      });
+      return networkResponse;
     }).catch(() => {
-      // Offline fallback handling (if requested HTML document, return cached index)
-      if (e.request.headers.get('accept').includes('text/html')) {
-        return caches.match('./index.html');
-      }
+      return caches.match(e.request).then((cachedResponse) => {
+        if (cachedResponse) {
+          return cachedResponse;
+        }
+        if (e.request.headers.get('accept') && e.request.headers.get('accept').includes('text/html')) {
+          return caches.match('./index.html');
+        }
+      });
     })
   );
 });

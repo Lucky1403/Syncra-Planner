@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,11 +8,13 @@
   <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&display=swap" rel="stylesheet">
+  <link
+    href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&display=swap"
+    rel="stylesheet">
   <!-- Lucide Icons CDN -->
   <script src="https://unpkg.com/lucide@latest"></script>
   <!-- Main Stylesheet -->
-  <link rel="stylesheet" href="styles.css?v=8">
+  <link rel="stylesheet" href="styles.css?v=12">
   <!-- PWA Manifest & Mobile Icons -->
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#f5f1ea">
@@ -19,10 +22,11 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <link rel="apple-touch-icon" href="icon.svg">
 </head>
+
 <body>
   <!-- App Container -->
   <div class="app-container">
-    
+
     <!-- Sidebar -->
     <aside class="sidebar">
       <div class="sidebar-brand">
@@ -34,7 +38,7 @@
 
       <!-- Live Clock widget -->
       <div class="clock-widget">
-        <div class="time-display" id="live-time">14:23</div>
+        <div class="time-display" id="live-time">12:00 PM</div>
         <div class="date-display" id="live-date">Thu, July 30, 2026</div>
       </div>
 
@@ -115,12 +119,15 @@
       </div>
 
       <!-- User Profile Badge & Logout -->
-      <div class="sidebar-user-section" id="sidebar-user-panel" style="margin-top: 15px; padding: 10px 14px; background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); border-radius: var(--border-radius-md); display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+      <div class="sidebar-user-section" id="sidebar-user-panel"
+        style="margin-top: 15px; padding: 10px 14px; background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); border-radius: var(--border-radius-md); display: flex; align-items: center; justify-content: space-between; gap: 8px;">
         <div style="min-width: 0; display: flex; align-items: center; gap: 8px; flex-grow: 1;">
           <i data-lucide="user" style="width: 14px; height: 14px; color: var(--color-primary); flex-shrink: 0;"></i>
-          <span id="user-email-display" style="font-size: 11px; color: var(--text-dark); text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">guest@syncra.com</span>
+          <span id="user-email-display"
+            style="font-size: 11px; color: var(--text-dark); text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">guest@syncra.com</span>
         </div>
-        <button id="btn-logout" title="Log Out" style="background: transparent; border: none; color: var(--text-dark); cursor: pointer; display: flex; align-items: center; padding: 4px; border-radius: var(--border-radius-sm); transition: color var(--transition-fast);">
+        <button id="btn-logout" title="Log Out"
+          style="background: transparent; border: none; color: var(--text-dark); cursor: pointer; display: flex; align-items: center; padding: 4px; border-radius: var(--border-radius-sm); transition: color var(--transition-fast);">
           <i data-lucide="log-out" style="width: 14px; height: 14px;"></i>
         </button>
       </div>
@@ -132,7 +139,7 @@
 
     <!-- Main Content Area -->
     <main class="main-content">
-      
+
       <!-- Top Header -->
       <header class="main-header">
         <div class="header-left">
@@ -140,13 +147,14 @@
           <p id="header-subtitle">Plan your agenda and stay ahead of the schedule.</p>
         </div>
         <div class="header-right">
-          <input class="custom-select" id="agenda-search" type="search" placeholder="Search agenda..." aria-label="Search agenda">
+          <input class="custom-select" id="agenda-search" type="search" placeholder="Search agenda..."
+            aria-label="Search agenda">
           <!-- Notification Status Button -->
           <button class="header-action-btn" id="btn-toggle-notifications" title="Enable System Notifications">
             <i data-lucide="bell"></i>
             <span class="status-indicator warning" id="notification-status-dot"></span>
           </button>
-          
+
           <!-- Calendar Month/Year selector -->
           <div class="calendar-navigator">
             <button class="nav-arrow" id="cal-prev" title="Previous Month">
@@ -162,7 +170,7 @@
 
       <!-- View Containers -->
       <div class="view-viewport">
-        
+
         <!-- Monthly Calendar View -->
         <section class="view-panel" id="view-calendar">
           <div class="calendar-grid-header">
@@ -208,7 +216,8 @@
           <div class="alert-content">
             <i data-lucide="alert-octagon"></i>
             <div>
-              <strong>Delay Risk Detected:</strong> <span id="delay-alert-text">You have 2 pending items past their scheduled due time!</span>
+              <strong>Delay Risk Detected:</strong> <span id="delay-alert-text">You have 2 pending items past their
+                scheduled due time!</span>
             </div>
           </div>
           <button class="alert-resolve-btn" id="btn-focus-overdue">View Items</button>
@@ -261,7 +270,7 @@
         <h2 id="modal-title">Create Task</h2>
         <button class="modal-close" id="modal-form-close"><i data-lucide="x"></i></button>
       </div>
-      
+
       <div class="modal-tabs">
         <button class="modal-tab active" id="tab-task" data-type="task">
           <i data-lucide="check-square"></i>
@@ -287,33 +296,22 @@
             <span class="error-message" id="error-date">Date is required.</span>
           </div>
 
-          <div class="form-group time-picker-wrapper">
-            <label for="form-time-start" id="label-time-start">Time</label>
-            <div class="time-picker-container">
+          <div class="form-group" id="group-due-time">
+            <label for="time-input-trigger" id="label-time-start">Due Time</label>
+            <div class="time-trigger-container">
+              <button type="button" class="time-input-trigger" id="time-input-trigger" aria-haspopup="dialog" aria-expanded="false">
+                <div class="time-trigger-left">
+                  <i data-lucide="clock" class="time-trigger-icon"></i>
+                  <span class="time-trigger-text" id="time-trigger-text">Select Due Time</span>
+                </div>
+                <div class="time-trigger-right">
+                  <span class="time-trigger-badge" id="time-trigger-badge">Set</span>
+                </div>
+              </button>
+              <button type="button" class="time-clear-btn hidden" id="time-clear-btn" title="Clear time" aria-label="Clear time">
+                <i data-lucide="x"></i>
+              </button>
               <input type="time" id="form-time-start" class="time-input-hidden">
-              <div class="time-picker-display">
-                <div class="time-clock">
-                  <div class="clock-face">
-                    <div class="clock-center"></div>
-                    <input type="range" id="time-picker-hour" class="time-slider hour-slider" min="0" max="23" value="12">
-                    <input type="range" id="time-picker-minute" class="time-slider minute-slider" min="0" max="59" value="0">
-                  </div>
-                </div>
-                <div class="time-display">
-                  <div class="time-input-group">
-                    <div class="time-value-box">
-                      <input type="number" id="hour-input" class="hour-input" min="0" max="23" placeholder="00">
-                      <span class="time-label">Hour</span>
-                    </div>
-                    <span class="time-separator">:</span>
-                    <div class="time-value-box">
-                      <input type="number" id="minute-input" class="minute-input" min="0" max="59" placeholder="00">
-                      <span class="time-label">Minute</span>
-                    </div>
-                  </div>
-                  <button type="button" class="btn btn-primary time-set-btn" id="time-set-btn">Set</button>
-                </div>
-              </div>
             </div>
           </div>
 
@@ -366,7 +364,8 @@
                 <option value="digital">Digital Pulse</option>
                 <option value="calm">Calm Rising</option>
               </select>
-              <button type="button" class="btn btn-secondary tone-preview-btn" id="btn-preview-tone" title="Preview selected alarm tone" aria-label="Preview selected alarm tone">
+              <button type="button" class="btn btn-secondary tone-preview-btn" id="btn-preview-tone"
+                title="Preview selected alarm tone" aria-label="Preview selected alarm tone">
                 <i data-lucide="volume-2"></i>
                 <span>Preview</span>
               </button>
@@ -414,7 +413,8 @@
         </div>
 
         <!-- Completion status (Edit Mode only) -->
-        <div class="form-group span-full hidden" id="group-completed" style="align-items: center; gap: 8px; margin-top: 8px;">
+        <div class="form-group span-full hidden" id="group-completed"
+          style="align-items: center; gap: 8px; margin-top: 8px;">
           <input type="checkbox" id="form-completed" style="width:18px; height:18px; cursor:pointer;">
           <label for="form-completed" style="margin:0; cursor:pointer; font-weight:600;">Mark event as completed</label>
         </div>
@@ -446,6 +446,68 @@
     </div>
   </div>
 
+  <!-- Android Material Time Picker Dialog Overlay Panel -->
+  <div class="clock-dialog-overlay hidden" id="clock-dialog-overlay" role="dialog" aria-modal="true" aria-labelledby="clock-btn-hour">
+    <div class="clock-dialog-backdrop" id="clock-dialog-backdrop"></div>
+    <div class="clock-dialog-card">
+      <div class="material-clock-picker" id="material-clock-picker">
+        <!-- Time Header -->
+        <div class="clock-picker-header">
+          <div class="clock-header-digits">
+            <button type="button" class="clock-digit-btn active" id="clock-btn-hour" aria-label="Select hour">10</button>
+            <span class="clock-digit-colon">:</span>
+            <button type="button" class="clock-digit-btn" id="clock-btn-minute" aria-label="Select minute">52</button>
+          </div>
+          <div class="clock-ampm-toggle">
+            <button type="button" class="clock-ampm-btn active" id="clock-btn-am">AM</button>
+            <button type="button" class="clock-ampm-btn" id="clock-btn-pm">PM</button>
+          </div>
+        </div>
+
+        <!-- Clock Dial View -->
+        <div class="clock-dial-view" id="clock-dial-view">
+          <div class="clock-dial-plate" id="clock-dial-plate">
+            <div class="clock-dial-center-dot"></div>
+            <div class="clock-hand" id="clock-hand">
+              <div class="clock-hand-line"></div>
+              <div class="clock-hand-bubble" id="clock-hand-bubble">
+                <span class="clock-bubble-text" id="clock-bubble-text">10</span>
+              </div>
+            </div>
+            <div class="clock-numbers" id="clock-numbers"></div>
+          </div>
+        </div>
+
+        <!-- Keyboard Direct Input View -->
+        <div class="clock-keyboard-view hidden" id="clock-keyboard-view">
+          <div class="clock-keyboard-inputs">
+            <div class="keyboard-input-group">
+              <input type="number" id="clock-manual-hour" min="1" max="12" class="clock-manual-input" value="10">
+              <span class="keyboard-input-label">Hour</span>
+            </div>
+            <span class="clock-manual-colon">:</span>
+            <div class="keyboard-input-group">
+              <input type="number" id="clock-manual-minute" min="0" max="59" class="clock-manual-input" value="52">
+              <span class="keyboard-input-label">Minute</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Picker Footer -->
+        <div class="clock-picker-footer">
+          <button type="button" class="clock-toggle-mode-btn" id="clock-toggle-mode-btn" title="Toggle keyboard input">
+            <i data-lucide="keyboard" id="clock-mode-icon"></i>
+          </button>
+          <div class="clock-footer-actions">
+            <button type="button" class="clock-action-btn clock-btn-cancel" id="clock-btn-cancel">Cancel</button>
+            <button type="button" class="clock-action-btn clock-btn-now" id="clock-btn-now">Now</button>
+            <button type="button" class="btn btn-primary clock-action-btn clock-btn-set" id="clock-btn-set">Set</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Alarm Alert Fullscreen Overlay -->
   <div class="alarm-overlay hidden" id="alarm-alert-overlay">
     <div class="alarm-card">
@@ -456,7 +518,7 @@
       <div class="alarm-item-type" id="alarm-item-type">TASK</div>
       <div class="alarm-item-title" id="alarm-item-title">Product Alignment Sync</div>
       <div class="alarm-item-time" id="alarm-item-time">Starts in 5 minutes (15:00)</div>
-      
+
       <!-- Action buttons -->
       <div class="alarm-actions">
         <button class="btn btn-lg btn-secondary" id="alarm-btn-snooze">
@@ -468,7 +530,7 @@
           <span>Acknowledge</span>
         </button>
       </div>
-      
+
     </div>
   </div>
 
@@ -509,7 +571,7 @@
       </div>
       <h2 id="auth-title">Log In to Syncra</h2>
       <p class="auth-subtitle" id="auth-subtitle">Keep your schedules synced across devices</p>
-      
+
       <form id="auth-form">
         <div class="form-group">
           <label for="auth-email">Email Address</label>
@@ -519,20 +581,24 @@
           <label for="auth-password">Password</label>
           <input type="password" id="auth-password" placeholder="••••••••" required autocomplete="current-password">
         </div>
-        
+
         <div class="auth-error hidden" id="auth-error-msg">Incorrect email or password.</div>
-        
-        <button type="submit" class="btn btn-primary" id="auth-submit-btn" style="margin-top: 25px; width: 100%;">Log In</button>
+
+        <button type="submit" class="btn btn-primary" id="auth-submit-btn" style="margin-top: 25px; width: 100%;">Log
+          In</button>
       </form>
-      
-      <div class="auth-switch-text" style="margin-top: 20px; text-align: center; font-size: 13px; color: var(--text-dark);">
-        <span id="auth-switch-prompt">Don't have an account?</span> 
-        <a href="#" id="auth-switch-btn" style="color: var(--color-primary); text-decoration: none; font-weight: 600;">Sign Up</a>
+
+      <div class="auth-switch-text"
+        style="margin-top: 20px; text-align: center; font-size: 13px; color: var(--text-dark);">
+        <span id="auth-switch-prompt">Don't have an account?</span>
+        <a href="#" id="auth-switch-btn"
+          style="color: var(--color-primary); text-decoration: none; font-weight: 600;">Sign Up</a>
       </div>
     </div>
   </div>
 
   <!-- Scripts -->
-  <script src="app.js?v=8"></script>
+  <script src="app.js?v=12"></script>
 </body>
+
 </html>

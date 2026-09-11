@@ -136,7 +136,7 @@ const DOM = {
   authSwitchBtn: document.getElementById('auth-switch-btn'),
   authSwitchPrompt: document.getElementById('auth-switch-prompt'),
   authErrorMsg: document.getElementById('auth-error-msg'),
-  
+
   // Profile element
   sidebarUserPanel: document.getElementById('sidebar-user-panel'),
   userEmailDisplay: document.getElementById('user-email-display'),
@@ -145,7 +145,7 @@ const DOM = {
   btnDeleteAccount: document.getElementById('btn-delete-account'),
   agendaItemsContainer: document.getElementById('agenda-items-container'),
   btnEmptyAdd: document.getElementById('btn-empty-add'),
-  
+
   // Modal Event Form
   modalEventForm: document.getElementById('modal-event-form'),
   modalTitle: document.getElementById('modal-title'),
@@ -157,12 +157,29 @@ const DOM = {
   formTitle: document.getElementById('form-title'),
   formDate: document.getElementById('form-date'),
   formTimeStart: document.getElementById('form-time-start'),
-  // Time picker elements
-  timePickerHour: document.getElementById('time-picker-hour'),
-  timePickerMinute: document.getElementById('time-picker-minute'),
-  hourInput: document.getElementById('hour-input'),
-  minuteInput: document.getElementById('minute-input'),
-  timeSetBtn: document.getElementById('time-set-btn'),
+  // Android Material Clock picker elements
+  clockBtnHour: document.getElementById('clock-btn-hour'),
+  clockBtnMinute: document.getElementById('clock-btn-minute'),
+  clockBtnAm: document.getElementById('clock-btn-am'),
+  clockBtnPm: document.getElementById('clock-btn-pm'),
+  clockDialView: document.getElementById('clock-dial-view'),
+  clockDialPlate: document.getElementById('clock-dial-plate'),
+  clockHand: document.getElementById('clock-hand'),
+  clockBubbleText: document.getElementById('clock-bubble-text'),
+  clockNumbers: document.getElementById('clock-numbers'),
+  clockKeyboardView: document.getElementById('clock-keyboard-view'),
+  clockManualHour: document.getElementById('clock-manual-hour'),
+  clockManualMinute: document.getElementById('clock-manual-minute'),
+  clockToggleModeBtn: document.getElementById('clock-toggle-mode-btn'),
+  clockModeIcon: document.getElementById('clock-mode-icon'),
+  clockBtnNow: document.getElementById('clock-btn-now'),
+  clockBtnSet: document.getElementById('clock-btn-set'),
+  clockBtnCancel: document.getElementById('clock-btn-cancel'),
+  clockDialogOverlay: document.getElementById('clock-dialog-overlay'),
+  clockDialogBackdrop: document.getElementById('clock-dialog-backdrop'),
+  timeInputTrigger: document.getElementById('time-input-trigger'),
+  timeTriggerText: document.getElementById('time-trigger-text'),
+  timeClearBtn: document.getElementById('time-clear-btn'),
   formPriority: document.getElementById('form-priority'),
   formCategory: document.getElementById('form-category'),
   formReminder: document.getElementById('form-reminder'),
@@ -180,7 +197,7 @@ const DOM = {
   btnCancelForm: document.getElementById('btn-cancel-form'),
   btnDeleteItem: document.getElementById('btn-delete-item'),
   btnSubmitForm: document.getElementById('btn-submit-form'),
-  
+
   // Dynamic form containers
   groupPriority: document.getElementById('group-priority'),
   groupSharing: document.getElementById('group-sharing'),
@@ -198,19 +215,19 @@ const DOM = {
   alarmItemTime: document.getElementById('alarm-item-time'),
   alarmBtnSnooze: document.getElementById('alarm-btn-snooze'),
   alarmBtnDismiss: document.getElementById('alarm-btn-dismiss'),
-  
+
   // Analytics
   completionPercentage: document.getElementById('completion-percentage'),
   statsProgressBar: document.getElementById('stats-progress-bar'),
   statCompleted: document.getElementById('stat-completed'),
   statPending: document.getElementById('stat-pending'),
   statDelayRisk: document.getElementById('stat-delay-risk'),
-  
+
   // Import/Export
   btnExport: document.getElementById('btn-export'),
   btnImport: document.getElementById('btn-import'),
   importFile: document.getElementById('import-file'),
-  
+
   // Sidebar count badges
   badgeAll: document.getElementById('badge-all'),
   badgeTasks: document.getElementById('badge-tasks'),
@@ -237,21 +254,21 @@ function initAudioContext() {
 
 function playAlarmNote(frequency, startTime, duration) {
   if (!audioCtx) return;
-  
+
   const osc = audioCtx.createOscillator();
   const gainNode = audioCtx.createGain();
-  
+
   // Blend a sine wave and triangle wave for a softer chime
   osc.type = 'sine';
   osc.frequency.setValueAtTime(frequency, startTime);
-  
+
   gainNode.gain.setValueAtTime(0, startTime);
   gainNode.gain.linearRampToValueAtTime(0.2, startTime + 0.05); // volume ramp up
   gainNode.gain.exponentialRampToValueAtTime(0.0001, startTime + duration); // decay
-  
+
   osc.connect(gainNode);
   gainNode.connect(audioCtx.destination);
-  
+
   osc.start(startTime);
   osc.stop(startTime + duration);
 }
@@ -268,7 +285,7 @@ const ALARM_TONES = {
 function playAlarmChimeSequence(tone = 'classic') {
   initAudioContext();
   if (!audioCtx) return;
-  
+
   const now = audioCtx.currentTime;
   const notes = ALARM_TONES[tone] || ALARM_TONES.classic;
   notes.forEach((frequency, index) => {
@@ -294,7 +311,7 @@ function stopAlarmAudio() {
 function init() {
   // Check auth session
   updateAuthUI();
-  
+
   // Load data first (synchronously for local, or start async for backend)
   if (state.userToken) {
     // For logged-in users, try to load local cache first, then sync from backend
@@ -322,7 +339,7 @@ function init() {
   if (state.userToken && 'Notification' in window && Notification.permission === 'granted') {
     registerPushSubscription();
   }
-  
+
   // Run Lucide renderer on startup to bind all icons (sidebar, auth logo, etc.)
   if (window.lucide) {
     lucide.createIcons();
@@ -382,7 +399,7 @@ function loadMockData() {
   const tomorrow = new Date();
   tomorrow.setDate(tomorrow.getDate() + 1);
   const tomorrowStr = getLocalDateString(tomorrow);
-  
+
   state.events = [
     {
       id: 'mock-1',
@@ -451,7 +468,7 @@ function loadMockData() {
 function renderApp() {
   updateHeaderDateLabel();
   syncNavigationActiveStates();
-  
+
   if (state.activeView === 'calendar') {
     DOM.viewCalendar.classList.remove('hidden');
     DOM.viewTimeline.classList.add('hidden');
@@ -461,12 +478,12 @@ function renderApp() {
     DOM.viewTimeline.classList.remove('hidden');
     renderDailyTimeline();
   }
-  
+
   renderAgendaList();
   updateAnalytics();
   updateCountBadges();
   checkDelayAlertBanner();
-  
+
   // Re-bind Lucide icons
   lucide.createIcons();
 }
@@ -480,7 +497,7 @@ function syncNavigationActiveStates() {
       btn.classList.remove('active');
     }
   });
-  
+
   // Mobile Bottom Nav
   document.querySelectorAll('.mobile-nav-item[data-view]').forEach(btn => {
     if (btn.dataset.view === state.activeView) {
@@ -491,6 +508,41 @@ function syncNavigationActiveStates() {
   });
 }
 
+
+// --- 12-Hour Time Format Helpers ---
+function formatTimeTo12(timeStr, padZero = false) {
+  if (!timeStr) return '';
+  const parts = String(timeStr).split(':');
+  if (parts.length < 2) return timeStr;
+  let hours = parseInt(parts[0], 10);
+  const minutes = String(parts[1]).padStart(2, '0');
+  if (isNaN(hours)) return timeStr;
+  const period = hours >= 12 ? 'PM' : 'AM';
+  hours = hours % 12 || 12;
+  const formattedHours = padZero ? String(hours).padStart(2, '0') : String(hours);
+  return `${formattedHours}:${minutes} ${period}`;
+}
+
+function formatDateTimeTo12(date, padZero = false) {
+  if (!(date instanceof Date) || isNaN(date.getTime())) return '';
+  let hours = date.getHours();
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  const period = hours >= 12 ? 'PM' : 'AM';
+  hours = hours % 12 || 12;
+  const formattedHours = padZero ? String(hours).padStart(2, '0') : String(hours);
+  return `${formattedHours}:${minutes} ${period}`;
+}
+
+function to24Hour(hour12, minute, period) {
+  let h = parseInt(hour12, 10) || 12;
+  const m = Math.max(0, Math.min(59, parseInt(minute, 10) || 0));
+  if (period === 'PM') {
+    if (h < 12) h += 12;
+  } else {
+    if (h === 12) h = 0;
+  }
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+}
 
 // --- Clock Widget ---
 function startLiveClock() {
@@ -504,16 +556,14 @@ function startLiveClock() {
       }
       lastLiveDate = liveDate;
     }
-    // 24 Hour Format for live-time
-    const hrs = String(now.getHours()).padStart(2, '0');
-    const mins = String(now.getMinutes()).padStart(2, '0');
-    DOM.liveTime.textContent = `${hrs}:${mins}`;
-    
+    // 12 Hour Format for live-time
+    DOM.liveTime.textContent = formatDateTimeTo12(now);
+
     // Custom formatted date
     const options = { weekday: 'short', month: 'long', day: 'numeric', year: 'numeric' };
     DOM.liveDate.textContent = now.toLocaleDateString('en-US', options);
   }
-  
+
   tick();
   setInterval(tick, 1000);
 }
@@ -523,21 +573,21 @@ function startLiveClock() {
 function updateHeaderDateLabel() {
   // Update Monthly Calendar Header Navigation text
   const monthNames = [
-    "January", "February", "March", "April", "May", "June", 
+    "January", "February", "March", "April", "May", "June",
     "July", "August", "September", "October", "November", "December"
   ];
   const activeMonth = state.currentDate.getMonth();
   const activeYear = state.currentDate.getFullYear();
   DOM.calCurrentLabel.textContent = `${monthNames[activeMonth]} ${activeYear}`;
-  
+
   // Set timeline text date picker label
   const options = { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' };
   DOM.timelineActiveDate.textContent = state.currentDate.toLocaleDateString('en-US', options);
-  
+
   // Set bottom agenda title
   const dateStr = state.currentDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   DOM.agendaTitle.textContent = `Agenda: ${dateStr}`;
-  
+
   // Greeting Title based on local time
   const hr = new Date().getHours();
   let greet = "Good evening!";
@@ -551,11 +601,11 @@ function updateHeaderDateLabel() {
 function updateCountBadges() {
   const activeDateStr = getLocalDateString(state.currentDate);
   const todaysEvents = state.events.filter(e => e.date === activeDateStr);
-  
+
   const allCount = todaysEvents.length;
   const tasksCount = todaysEvents.filter(e => e.type === 'task').length;
   const urgentCount = todaysEvents.filter(e => e.priority === 'high' && !e.completed).length;
-  
+
   DOM.badgeAll.textContent = allCount;
   DOM.badgeTasks.textContent = tasksCount;
   DOM.badgeUrgent.textContent = urgentCount;
@@ -566,19 +616,19 @@ function updateCountBadges() {
 function updateAnalytics() {
   const activeDateStr = getLocalDateString(state.currentDate);
   const todaysEvents = state.events.filter(e => e.date === activeDateStr);
-  
+
   const total = todaysEvents.length;
   const completed = todaysEvents.filter(e => e.completed).length;
   const pending = total - completed;
-  
+
   // Delay Risk Count
   const delayRisk = calculateDelayRiskCount(todaysEvents);
-  
+
   // Completion %
   const pct = total > 0 ? Math.round((completed / total) * 100) : 0;
   DOM.completionPercentage.textContent = `${pct}%`;
   DOM.statsProgressBar.style.width = `${pct}%`;
-  
+
   DOM.statCompleted.textContent = completed;
   DOM.statPending.textContent = pending;
   DOM.statDelayRisk.textContent = delayRisk;
@@ -589,18 +639,18 @@ function calculateDelayRiskCount(eventList) {
   const now = new Date();
   const todayStr = getLocalDateString(now);
   const currentHrMin = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
-  
+
   return eventList.filter(e => {
     if (e.completed) return false;
-    
+
     // Past date is always delay risk
     if (e.date < todayStr) return true;
-    
+
     // If today, check if past start time
     if (e.date === todayStr && e.startTime) {
       return e.startTime < currentHrMin;
     }
-    
+
     return false;
   }).length;
 }
@@ -610,14 +660,14 @@ function checkDelayAlertBanner() {
   const now = new Date();
   const todayStr = getLocalDateString(now);
   const currentHrMin = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
-  
+
   const overdueItems = state.events.filter(e => {
     if (e.completed) return false;
     if (e.date < todayStr) return true;
     if (e.date === todayStr && e.startTime && e.startTime < currentHrMin) return true;
     return false;
   });
-  
+
   if (overdueItems.length > 0) {
     DOM.delayAlertBanner.classList.remove('hidden');
     DOM.delayAlertText.textContent = `You have ${overdueItems.length} overdue task(s) past schedule!`;
@@ -630,29 +680,29 @@ function checkDelayAlertBanner() {
 // --- Monthly Calendar Grid Renderer ---
 function renderMonthlyCalendar() {
   DOM.calendarDaysContainer.innerHTML = '';
-  
+
   const activeYear = state.currentDate.getFullYear();
   const activeMonth = state.currentDate.getMonth();
-  
+
   // First day of active month
   const firstDay = new Date(activeYear, activeMonth, 1);
   const startDayIdx = firstDay.getDay(); // 0 is Sun, 6 is Sat
-  
+
   // Total days in active month
   const totalDays = new Date(activeYear, activeMonth + 1, 0).getDate();
-  
+
   // Total days in previous month
   const prevMonthTotalDays = new Date(activeYear, activeMonth, 0).getDate();
-  
+
   const totalCells = 42; // standard 6-row grid
-  
+
   // Render loop
   for (let i = 0; i < totalCells; i++) {
     const cell = document.createElement('div');
     cell.className = 'calendar-day-cell';
-    
+
     let cellDay, cellMonth, cellYear;
-    
+
     if (i < startDayIdx) {
       // Previous Month padding days
       cell.classList.add('other-month');
@@ -678,65 +728,65 @@ function renderMonthlyCalendar() {
       cellDay = i - startDayIdx + 1;
       cellMonth = activeMonth;
       cellYear = activeYear;
-      
+
       // Highlight today
       const today = new Date();
       if (cellDay === today.getDate() && cellMonth === today.getMonth() && cellYear === today.getFullYear()) {
         cell.classList.add('today');
       }
     }
-    
+
     // Check if cell is the active state.currentDate day
     if (cellDay === state.currentDate.getDate() && cellMonth === state.currentDate.getMonth() && cellYear === state.currentDate.getFullYear()) {
       cell.style.boxShadow = 'inset 0 0 0 2px var(--color-primary)';
     }
-    
+
     // Create Cell date identifier
     const cellDateObj = new Date(cellYear, cellMonth, cellDay);
     const dateStr = getLocalDateString(cellDateObj);
     cell.dataset.date = dateStr;
-    
+
     // Day Label
     const dayLabel = document.createElement('span');
     dayLabel.className = 'day-number';
     dayLabel.textContent = cellDay;
     cell.appendChild(dayLabel);
-    
+
     // Events List inside cell
     const eventsList = document.createElement('div');
     eventsList.className = 'day-events-list';
-    
+
     // Filter events matching cell date
     const cellEvents = state.events.filter(e => e.date === dateStr);
-    
+
     // Limit calendar view cell items to 3 items max
     const maxItems = 3;
     cellEvents.slice(0, maxItems).forEach(ev => {
       const badge = document.createElement('div');
       badge.className = `day-event-badge type-${ev.type} priority-${ev.priority}`;
       if (ev.completed) badge.classList.add('completed');
-      
-      const timeStr = ev.startTime ? `${ev.startTime} ` : '';
+
+      const timeStr = ev.startTime ? `${formatTimeTo12(ev.startTime)} ` : '';
       badge.textContent = `${timeStr}${ev.title}`;
       badge.title = `${ev.type.toUpperCase()}: ${ev.title}`;
       eventsList.appendChild(badge);
     });
-    
+
     if (cellEvents.length > maxItems) {
       const moreLabel = document.createElement('div');
       moreLabel.className = 'day-events-more';
       moreLabel.textContent = `+${cellEvents.length - maxItems} more`;
       eventsList.appendChild(moreLabel);
     }
-    
+
     cell.appendChild(eventsList);
-    
+
     // Cell Click Event
     cell.addEventListener('click', () => {
       state.currentDate = new Date(cellYear, cellMonth, cellDay);
       renderApp();
     });
-    
+
     DOM.calendarDaysContainer.appendChild(cell);
   }
 }
@@ -748,29 +798,29 @@ function renderDailyTimeline() {
   if (DOM.timelineHours) {
     DOM.timelineHours.style.display = 'none';
   }
-  
+
   DOM.timelineSlots.innerHTML = '';
-  
+
   const startHour = 0;
   const endHour = 23; // 11 PM
-  
+
   // Render tabular rows inside the slots column container
   for (let hr = startHour; hr <= endHour; hr++) {
     const row = document.createElement('div');
     row.className = 'timeline-table-row';
     row.dataset.hour = hr;
-    
+
     // Time label cell (left side)
     const timeCell = document.createElement('div');
     timeCell.className = 'timeline-time-cell';
     let label = hr % 12 === 0 ? 12 : hr % 12;
     label += hr >= 12 ? ' PM' : ' AM';
     timeCell.textContent = label;
-    
+
     // Events slot cell (right side)
     const eventsCell = document.createElement('div');
     eventsCell.className = 'timeline-events-cell';
-    
+
     row.appendChild(timeCell);
     row.appendChild(eventsCell);
     row.addEventListener('dragover', (event) => event.preventDefault());
@@ -787,26 +837,26 @@ function renderDailyTimeline() {
     });
     DOM.timelineSlots.appendChild(row);
   }
-  
+
   // Get active date strings
   const activeDateStr = getLocalDateString(state.currentDate);
   const daysEvents = state.events.filter(e => e.date === activeDateStr);
-  
+
   // Render timeline cards into their respective hour slot cells
   daysEvents.forEach(ev => {
     if (!ev.startTime) return; // Skip events without a defined time
-    
+
     const [startH, startM] = ev.startTime.split(':').map(Number);
-    
+
     // Out of timeline window limit handling
     if (startH < startHour || startH > endHour) return;
-    
+
     const row = DOM.timelineSlots.querySelector(`[data-hour="${startH}"]`);
     if (!row) return;
     const eventsCell = row.querySelector('.timeline-events-cell');
     if (!eventsCell) return;
-    
-    
+
+
     // Draw event box
     const card = document.createElement('div');
     card.className = `timeline-event-card type-${ev.type}`;
@@ -814,47 +864,50 @@ function renderDailyTimeline() {
     card.addEventListener('dragstart', (event) => event.dataTransfer.setData('text/plain', ev.id));
     if (ev.duration) card.style.minHeight = `${Math.max(70, Math.min(360, ev.duration * 1.5))}px`;
     if (ev.completed) card.classList.add('completed');
-    
+
     // Inner container for horizontal alignment
     const inner = document.createElement('div');
     inner.className = 'timeline-card-inner';
-    
+
     // Checkbox if task type to mark as done directly
     if (ev.type === 'task') {
-      const checkboxWrapper = document.createElement('div');
+      const checkboxWrapper = document.createElement('label');
       checkboxWrapper.className = 'item-checkbox-wrapper';
-      
+      checkboxWrapper.title = ev.completed ? 'Mark as incomplete' : 'Mark as completed';
+      checkboxWrapper.addEventListener('click', (e) => e.stopPropagation());
+
       const chk = document.createElement('input');
       chk.type = 'checkbox';
-      chk.checked = ev.completed;
+      chk.checked = !!ev.completed;
       chk.disabled = !canEditEvent(ev);
       chk.addEventListener('change', (e) => {
-        e.stopPropagation(); // Avoid opening details modal
+        e.stopPropagation();
         toggleEventCompletion(ev.id);
       });
-      
-      const customChk = document.createElement('div');
+
+      const customChk = document.createElement('span');
       customChk.className = 'checkbox-custom';
-      
+
       checkboxWrapper.appendChild(chk);
       checkboxWrapper.appendChild(customChk);
       inner.appendChild(checkboxWrapper);
     }
-    
+
     // Details wrapper
     const details = document.createElement('div');
     details.className = 'timeline-card-details';
-    
+
     const title = document.createElement('div');
     title.className = 'timeline-card-title';
     title.textContent = ev.title;
     details.appendChild(title);
-    
+
     const timeMeta = document.createElement('div');
     timeMeta.className = 'timeline-card-time';
-    timeMeta.innerHTML = `<i data-lucide="clock" style="width:11px;height:11px;"></i> <span>${ev.startTime}${durationLabel}</span>`;
+    const durationLabel = ev.duration ? ` (${ev.duration}m)` : '';
+    timeMeta.innerHTML = `<i data-lucide="clock" style="width:11px;height:11px;"></i> <span>${formatTimeTo12(ev.startTime)}${durationLabel}</span>`;
     details.appendChild(timeMeta);
-    
+
     // In tabular view we can always display category and priority details if they exist
     if (ev.category) {
       const categoryMeta = document.createElement('div');
@@ -862,19 +915,19 @@ function renderDailyTimeline() {
       categoryMeta.innerHTML = `<span>🏷️ ${ev.category.toUpperCase()}</span> <span>Priority: ${ev.priority.toUpperCase()}</span>`;
       details.appendChild(categoryMeta);
     }
-    
+
     inner.appendChild(details);
     card.appendChild(inner);
-    
+
     // Click action to open edit modal
     card.addEventListener('click', (e) => {
       e.stopPropagation();
       openFormModal(ev.id);
     });
-    
+
     eventsCell.appendChild(card);
   });
-  
+
   // Re-run Lucide Icons rendering on dynamically added tags
   if (window.lucide) {
     window.lucide.createIcons();
@@ -885,12 +938,12 @@ function renderDailyTimeline() {
 // --- Agenda List Bottom Panel Renderer ---
 function renderAgendaList() {
   DOM.agendaItemsContainer.innerHTML = '';
-  
+
   const activeDateStr = getLocalDateString(state.currentDate);
-  
+
   // Filter by selected date & sidebar filter toggle
   let items = state.events.filter(e => e.date === activeDateStr);
-  
+
   if (state.activeFilter === 'tasks') {
     items = items.filter(e => e.type === 'task');
   } else if (state.activeFilter === 'urgent') {
@@ -907,7 +960,7 @@ function renderAgendaList() {
   }
   if (state.statusFilter === 'completed') items = items.filter(e => e.completed);
   if (state.statusFilter === 'pending') items = items.filter(e => !e.completed);
-  
+
   // Sorting Engine
   items.sort((a, b) => {
     if (state.sortFilter === 'time') {
@@ -922,7 +975,7 @@ function renderAgendaList() {
     }
     return 0;
   });
-  
+
   // Render
   if (items.length === 0) {
     const emptyState = document.createElement('div');
@@ -934,68 +987,73 @@ function renderAgendaList() {
     DOM.agendaItemsContainer.appendChild(emptyState);
     return;
   }
-  
+
   items.forEach(ev => {
     const box = document.createElement('div');
     box.className = `agenda-item-box ${ev.completed ? 'completed' : ''}`;
     box.dataset.id = ev.id;
-    
+
     // Checkbox Wrapper
-    const checkWrap = document.createElement('div');
+    const checkWrap = document.createElement('label');
     checkWrap.className = 'item-checkbox-wrapper';
-    
+    checkWrap.title = ev.completed ? 'Mark as incomplete' : 'Mark as completed';
+    checkWrap.addEventListener('click', (e) => e.stopPropagation());
+
     const chk = document.createElement('input');
     chk.type = 'checkbox';
-    chk.checked = ev.completed;
+    chk.checked = !!ev.completed;
     chk.disabled = !canEditEvent(ev);
-    chk.addEventListener('change', () => toggleEventCompletion(ev.id));
-    
+    chk.addEventListener('change', (e) => {
+      e.stopPropagation();
+      toggleEventCompletion(ev.id);
+    });
+
     const customSpan = document.createElement('span');
     customSpan.className = 'checkbox-custom';
-    
+
     checkWrap.appendChild(chk);
     checkWrap.appendChild(customSpan);
     box.appendChild(checkWrap);
-    
+
     // Detail Row Left
     const details = document.createElement('div');
     details.className = 'item-details-left';
-    
+
     const mainTitleRow = document.createElement('div');
     mainTitleRow.className = 'item-main-title-row';
-    
+
     const titleSpan = document.createElement('span');
     titleSpan.className = 'item-title';
     titleSpan.textContent = ev.title;
     mainTitleRow.appendChild(titleSpan);
-    
+
     // Priority / Type Badge
     const typePill = document.createElement('span');
     typePill.className = `pill pill-type-${ev.type}`;
     typePill.textContent = ev.type;
     mainTitleRow.appendChild(typePill);
-    
+
     if (!ev.completed) {
       const prioPill = document.createElement('span');
       prioPill.className = `pill pill-priority-${ev.priority}`;
       prioPill.textContent = ev.priority;
       mainTitleRow.appendChild(prioPill);
     }
-    
+
     details.appendChild(mainTitleRow);
-    
+
     // Meta information sub-row
     const metaRow = document.createElement('div');
     metaRow.className = 'item-meta-row';
-    
+
     // Time
     if (ev.startTime) {
-      const durationText = ev.endTime ? ` - ${ev.endTime}` : '';
+      const durationText = ev.endTime ? ` - ${formatTimeTo12(ev.endTime)}` : '';
       metaRow.innerHTML += `
-        <span class="meta-split"><i data-lucide="clock"></i>${ev.startTime}${durationText}</span>
+        <span class="meta-split"><i data-lucide="clock"></i>${formatTimeTo12(ev.startTime)}${durationText}</span>
       `;
     }
-    
+
     // Task checklist stats
     if (ev.type === 'task' && ev.subtasks && ev.subtasks.length > 0) {
       const doneSub = ev.subtasks.filter(s => s.completed).length;
@@ -1003,7 +1061,7 @@ function renderAgendaList() {
         <span class="meta-split"><i data-lucide="list-checks"></i>Subtasks: ${doneSub}/${ev.subtasks.length}</span>
       `;
     }
-    
+
     // Category Label
     if (ev.category) {
       const categoryEmoji = {
@@ -1013,15 +1071,15 @@ function renderAgendaList() {
         health: '❤️ Health',
         other: '⭐ Other'
       }[ev.category] || '🏷️';
-      
+
       metaRow.innerHTML += `
         <span class="meta-split"><span>${categoryEmoji}</span></span>
       `;
     }
-    
+
     details.appendChild(metaRow);
     box.appendChild(details);
-    
+
     // Subtasks Dropdown list if not editing
     if (ev.type === 'task' && ev.subtasks && ev.subtasks.length > 0) {
       const subtaskCollapse = document.createElement('div');
@@ -1031,57 +1089,57 @@ function renderAgendaList() {
       subtaskCollapse.style.display = 'flex';
       subtaskCollapse.style.flexDirection = 'column';
       subtaskCollapse.style.gap = '4px';
-      
+
       ev.subtasks.forEach(s => {
         const item = document.createElement('div');
         item.style.display = 'flex';
         item.style.alignItems = 'center';
         item.style.gap = '8px';
         item.style.fontSize = '12px';
-        
+
         const schk = document.createElement('input');
         schk.type = 'checkbox';
         schk.checked = s.completed;
         schk.disabled = !canEditEvent(ev);
         schk.addEventListener('change', () => toggleSubtaskCompletion(ev.id, s.id));
-        
+
         const slbl = document.createElement('span');
         slbl.textContent = s.text;
         if (s.completed) {
           slbl.style.textDecoration = 'line-through';
           slbl.style.color = 'var(--text-muted)';
         }
-        
+
         item.appendChild(schk);
         item.appendChild(slbl);
         subtaskCollapse.appendChild(item);
       });
-      
+
       // We append it after detail row in layout. Let's restructure box
       const flexContainer = document.createElement('div');
       flexContainer.style.display = 'flex';
       flexContainer.style.flexDirection = 'column';
       flexContainer.style.flexGrow = '1';
-      
+
       // Swap children
       box.removeChild(details);
       flexContainer.appendChild(details);
       flexContainer.appendChild(subtaskCollapse);
-      
+
       box.insertBefore(flexContainer, box.children[1]);
     }
-    
+
     // Action Buttons Right
     const actionWrap = document.createElement('div');
     actionWrap.className = 'item-actions-right';
-    
+
     const editBtn = document.createElement('button');
     editBtn.className = 'action-icon-btn';
     editBtn.title = isSharedEvent(ev) ? `Shared event (${ev.sharePermission})` : 'Edit Event';
     editBtn.innerHTML = `<i data-lucide="${isSharedEvent(ev) ? 'users' : 'edit-3'}"></i>`;
     editBtn.addEventListener('click', () => openFormModal(ev.id));
     actionWrap.appendChild(editBtn);
-    
+
     if (!isSharedEvent(ev)) {
       const deleteBtn = document.createElement('button');
       deleteBtn.className = 'action-icon-btn delete';
@@ -1090,7 +1148,7 @@ function renderAgendaList() {
       deleteBtn.addEventListener('click', () => deleteEvent(ev.id));
       actionWrap.appendChild(deleteBtn);
     }
-    
+
     box.appendChild(actionWrap);
     DOM.agendaItemsContainer.appendChild(box);
   });
@@ -1127,7 +1185,7 @@ function toggleSubtaskCompletion(taskId, subtaskId) {
     if (sub) {
       sub.completed = !sub.completed;
       ev.updatedAt = new Date().toISOString();
-      
+
       // Auto complete parent task if all subtasks are finished
       const allDone = ev.subtasks.every(s => s.completed);
       if (allDone && !ev.completed) {
@@ -1136,7 +1194,7 @@ function toggleSubtaskCompletion(taskId, subtaskId) {
       } else if (!allDone && ev.completed) {
         ev.completed = false;
       }
-      
+
       if (isSharedEvent(ev)) {
         updateSharedEvent(ev).then(updated => {
           Object.assign(ev, updated);
@@ -1171,19 +1229,19 @@ function deleteEvent(eventId) {
 // --- Form Modal Creation & Handling ---
 function openFormModal(eventId = null) {
   initAudioContext(); // Enable Audio context on user click trigger
-  
+
   DOM.eventCreationForm.reset();
   DOM.subtasksFormListContainer.innerHTML = '';
   state.editingEventId = eventId;
   state.tempSubtasks = [];
-  
+
   DOM.modalEventForm.classList.remove('hidden');
-  
+
   if (eventId) {
     // Edit mode
     const ev = state.events.find(e => e.id === eventId);
     if (!ev) return;
-    
+
     DOM.modalTitle.textContent = "Edit Task";
     DOM.formItemId.value = ev.id;
     DOM.formItemType.value = ev.type;
@@ -1201,14 +1259,14 @@ function openFormModal(eventId = null) {
     });
     DOM.formAlarmTone.value = ev.alarmTone || 'classic';
     DOM.formDescription.value = ev.description || '';
-    
+
     // Populate tab active classes
     if (ev.type === 'task') {
       setFormTypeTab('task');
       state.tempSubtasks = ev.subtasks ? [...ev.subtasks] : [];
       renderFormSubtasks();
     }
-    
+
     DOM.btnDeleteItem.classList.remove('hidden');
     if (isSharedEvent(ev)) {
       DOM.groupSharing.classList.add('hidden');
@@ -1217,16 +1275,16 @@ function openFormModal(eventId = null) {
       DOM.groupSharing.classList.remove('hidden');
       loadEventShares(ev.id);
     }
-    
+
     // Show completion checkbox in edit mode
     DOM.groupCompleted.classList.remove('hidden');
     DOM.groupCompleted.style.display = 'flex';
     DOM.formCompleted.checked = ev.completed;
     const canEdit = canEditEvent(ev);
     [DOM.formTitle, DOM.formDate, DOM.formTimeStart, DOM.formPriority,
-      DOM.formCategory, DOM.formReminder, DOM.formAlarmTone,
-      DOM.formDuration, DOM.formDescription,
-      DOM.formCompleted, DOM.tabTask, DOM.btnAddSubtask].forEach(control => {
+    DOM.formCategory, DOM.formReminder, DOM.formAlarmTone,
+    DOM.formDuration, DOM.formDescription,
+    DOM.formCompleted, DOM.tabTask, DOM.btnAddSubtask].forEach(control => {
       if (control) control.disabled = !canEdit;
     });
     DOM.formAdditionalReminders.querySelectorAll('input').forEach(input => { input.disabled = !canEdit; });
@@ -1237,36 +1295,39 @@ function openFormModal(eventId = null) {
     DOM.modalTitle.textContent = "Create Task";
     DOM.formItemId.value = '';
     DOM.formDate.value = getLocalDateString(state.currentDate);
-    DOM.btnDeleteItem.classList.add('hidden');
-    DOM.groupSharing.classList.add('hidden');
-    
+    if (DOM.btnDeleteItem) DOM.btnDeleteItem.classList.add('hidden');
+    if (DOM.groupSharing) DOM.groupSharing.classList.add('hidden');
+
     // Hide completion checkbox in create mode
-    DOM.groupCompleted.classList.add('hidden');
-    DOM.groupCompleted.style.display = 'none';
-    DOM.formCompleted.checked = false;
-    DOM.btnSubmitForm.classList.remove('hidden');
+    if (DOM.groupCompleted) {
+      DOM.groupCompleted.classList.add('hidden');
+      DOM.groupCompleted.style.display = 'none';
+    }
+    if (DOM.formCompleted) DOM.formCompleted.checked = false;
+    if (DOM.btnSubmitForm) DOM.btnSubmitForm.classList.remove('hidden');
     [DOM.formTitle, DOM.formDate, DOM.formTimeStart, DOM.formPriority,
-      DOM.formCategory, DOM.formReminder, DOM.formAlarmTone,
-      DOM.formDuration, DOM.formDescription,
-      DOM.formCompleted, DOM.tabTask, DOM.btnAddSubtask].forEach(control => {
+    DOM.formCategory, DOM.formReminder, DOM.formAlarmTone,
+    DOM.formDuration, DOM.formDescription,
+    DOM.formCompleted, DOM.tabTask, DOM.btnAddSubtask].forEach(control => {
       if (control) control.disabled = false;
     });
     DOM.formAlarmTone.value = 'classic';
     DOM.formAdditionalReminders.querySelectorAll('input').forEach(input => { input.checked = false; });
-    
+
     // Default values
     setFormTypeTab('task');
   }
-  
+
   // Initialize time picker with current value or now time
   initializeTimePicker(DOM.formTimeStart.value);
-  
+
   // Re-bind Lucide icons in modal
   lucide.createIcons();
 }
 
 function closeFormModal() {
   DOM.modalEventForm.classList.add('hidden');
+  closeClockDialog();
   state.editingEventId = null;
 }
 
@@ -1278,67 +1339,271 @@ function setFormTypeTab(type) {
   DOM.labelTimeStart.textContent = "Due Time";
 }
 
-// Time Picker Functions
-function updateTimePickerFromSlider() {
-  const hours = parseInt(DOM.timePickerHour.value) || 0;
-  const minutes = parseInt(DOM.timePickerMinute.value) || 0;
-  
-  // Update input fields
-  DOM.hourInput.value = String(hours).padStart(2, '0');
-  DOM.minuteInput.value = String(minutes).padStart(2, '0');
-  
-  // Visual update - position the slider thumbs based on time
-  const hourPercent = (hours / 23) * 100;
-  const minutePercent = (minutes / 59) * 100;
-  
-  DOM.timePickerHour.style.setProperty('--value', hourPercent);
-  DOM.timePickerMinute.style.setProperty('--value', minutePercent);
+// Material Clock Time Picker State
+const clockPickerState = {
+  hour: 10,
+  minute: 52,
+  period: 'AM',
+  activeUnit: 'hour', // 'hour' | 'minute'
+  inputMode: 'dial', // 'dial' | 'keyboard'
+  isDragging: false
+};
+
+function renderClockNumbers() {
+  if (!DOM.clockNumbers || !DOM.clockDialPlate) return;
+  DOM.clockNumbers.innerHTML = '';
+
+  const plateRect = DOM.clockDialPlate.getBoundingClientRect();
+  const plateWidth = plateRect.width || 240;
+  const radius = (plateWidth / 2) * 0.70;
+
+  if (clockPickerState.activeUnit === 'hour') {
+    for (let h = 1; h <= 12; h++) {
+      const angle = h * 30; // degrees from 12 o'clock
+      const rad = (angle * Math.PI) / 180;
+      const x = 50 + (radius / (plateWidth / 2) * 50) * Math.sin(rad);
+      const y = 50 - (radius / (plateWidth / 2) * 50) * Math.cos(rad);
+
+      const numEl = document.createElement('div');
+      numEl.className = `clock-number ${h === clockPickerState.hour ? 'active' : ''}`;
+      numEl.textContent = h;
+      numEl.style.left = `${x}%`;
+      numEl.style.top = `${y}%`;
+      numEl.addEventListener('click', (e) => {
+        e.stopPropagation();
+        selectClockHour(h, true);
+      });
+      DOM.clockNumbers.appendChild(numEl);
+    }
+  } else {
+    for (let m = 0; m < 60; m += 5) {
+      const angle = m * 6; // degrees from 12 o'clock
+      const rad = (angle * Math.PI) / 180;
+      const x = 50 + (radius / (plateWidth / 2) * 50) * Math.sin(rad);
+      const y = 50 - (radius / (plateWidth / 2) * 50) * Math.cos(rad);
+
+      const numEl = document.createElement('div');
+      numEl.className = `clock-number ${m === clockPickerState.minute ? 'active' : ''}`;
+      numEl.textContent = String(m).padStart(2, '0');
+      numEl.style.left = `${x}%`;
+      numEl.style.top = `${y}%`;
+      numEl.addEventListener('click', (e) => {
+        e.stopPropagation();
+        selectClockMinute(m);
+      });
+      DOM.clockNumbers.appendChild(numEl);
+    }
+  }
 }
 
-function updateTimePickerFromInput() {
-  let hours = parseInt(DOM.hourInput.value) || 0;
-  let minutes = parseInt(DOM.minuteInput.value) || 0;
-  
-  // Validate and constrain
-  hours = Math.max(0, Math.min(23, hours));
-  minutes = Math.max(0, Math.min(59, minutes));
-  
-  // Update inputs with validated values
-  DOM.hourInput.value = String(hours).padStart(2, '0');
-  DOM.minuteInput.value = String(minutes).padStart(2, '0');
-  
-  // Update sliders
-  DOM.timePickerHour.value = hours;
-  DOM.timePickerMinute.value = minutes;
-  
-  updateTimePickerFromSlider();
+function updateClockHand() {
+  if (!DOM.clockHand || !DOM.clockBubbleText) return;
+
+  const isHour = clockPickerState.activeUnit === 'hour';
+  const angle = isHour
+    ? (clockPickerState.hour % 12) * 30
+    : clockPickerState.minute * 6;
+
+  DOM.clockHand.style.transform = `rotate(${angle}deg)`;
+  DOM.clockBubbleText.textContent = isHour
+    ? clockPickerState.hour
+    : String(clockPickerState.minute).padStart(2, '0');
+
+  // Keep bubble text upright
+  DOM.clockBubbleText.style.transform = `rotate(${-angle}deg)`;
+
+  // Update active class on numbers
+  if (DOM.clockNumbers) {
+    const numbers = DOM.clockNumbers.querySelectorAll('.clock-number');
+    numbers.forEach(el => {
+      const val = parseInt(el.textContent, 10);
+      const isActive = isHour ? val === clockPickerState.hour : val === clockPickerState.minute;
+      el.classList.toggle('active', isActive);
+    });
+  }
+}
+
+function updateClockHeaderDisplay() {
+  if (DOM.clockBtnHour) {
+    DOM.clockBtnHour.textContent = String(clockPickerState.hour).padStart(2, '0');
+    DOM.clockBtnHour.classList.toggle('active', clockPickerState.activeUnit === 'hour');
+  }
+  if (DOM.clockBtnMinute) {
+    DOM.clockBtnMinute.textContent = String(clockPickerState.minute).padStart(2, '0');
+    DOM.clockBtnMinute.classList.toggle('active', clockPickerState.activeUnit === 'minute');
+  }
+  if (DOM.clockBtnAm) {
+    DOM.clockBtnAm.classList.toggle('active', clockPickerState.period === 'AM');
+  }
+  if (DOM.clockBtnPm) {
+    DOM.clockBtnPm.classList.toggle('active', clockPickerState.period === 'PM');
+  }
+  if (DOM.clockManualHour) {
+    DOM.clockManualHour.value = clockPickerState.hour;
+  }
+  if (DOM.clockManualMinute) {
+    DOM.clockManualMinute.value = String(clockPickerState.minute).padStart(2, '0');
+  }
+}
+
+function syncTimeToForm() {
+  const time24 = to24Hour(clockPickerState.hour, clockPickerState.minute, clockPickerState.period);
+  if (DOM.formTimeStart) {
+    DOM.formTimeStart.value = time24;
+  }
+}
+
+function setClockUnit(unit) {
+  clockPickerState.activeUnit = unit;
+  updateClockHeaderDisplay();
+  renderClockNumbers();
+  updateClockHand();
+}
+
+function setClockPeriod(period) {
+  clockPickerState.period = period;
+  updateClockHeaderDisplay();
+  syncTimeToForm();
+}
+
+function selectClockHour(hour, autoAdvance = true) {
+  clockPickerState.hour = Math.max(1, Math.min(12, hour));
+  updateClockHeaderDisplay();
+  updateClockHand();
+  syncTimeToForm();
+  if (autoAdvance) {
+    setTimeout(() => {
+      setClockUnit('minute');
+    }, 200);
+  }
+}
+
+function selectClockMinute(minute) {
+  clockPickerState.minute = Math.max(0, Math.min(59, minute));
+  updateClockHeaderDisplay();
+  updateClockHand();
+  syncTimeToForm();
+}
+
+function handleDialPointerEvent(e) {
+  if (!DOM.clockDialPlate) return;
+  const rect = DOM.clockDialPlate.getBoundingClientRect();
+  const cx = rect.left + rect.width / 2;
+  const cy = rect.top + rect.height / 2;
+  const dx = e.clientX - cx;
+  const dy = e.clientY - cy;
+
+  let deg = Math.atan2(dx, -dy) * (180 / Math.PI);
+  if (deg < 0) deg += 360;
+
+  if (clockPickerState.activeUnit === 'hour') {
+    let h = Math.round(deg / 30) % 12;
+    if (h === 0) h = 12;
+    selectClockHour(h, false);
+  } else {
+    let m = Math.round(deg / 6) % 60;
+    selectClockMinute(m);
+  }
+}
+
+function toggleClockInputMode() {
+  if (clockPickerState.inputMode === 'dial') {
+    clockPickerState.inputMode = 'keyboard';
+    if (DOM.clockDialView) DOM.clockDialView.classList.add('hidden');
+    if (DOM.clockKeyboardView) DOM.clockKeyboardView.classList.remove('hidden');
+    if (DOM.clockModeIcon) DOM.clockModeIcon.setAttribute('data-lucide', 'clock');
+  } else {
+    clockPickerState.inputMode = 'dial';
+    if (DOM.clockDialView) DOM.clockDialView.classList.remove('hidden');
+    if (DOM.clockKeyboardView) DOM.clockKeyboardView.classList.add('hidden');
+    if (DOM.clockModeIcon) DOM.clockModeIcon.setAttribute('data-lucide', 'keyboard');
+    renderClockNumbers();
+    updateClockHand();
+  }
+  if (window.lucide) lucide.createIcons();
+}
+
+function updateTimeTriggerDisplay() {
+  if (!DOM.timeTriggerText) return;
+  if (DOM.formTimeStart && DOM.formTimeStart.value) {
+    DOM.timeTriggerText.textContent = formatTimeTo12(DOM.formTimeStart.value);
+    DOM.timeTriggerText.classList.remove('placeholder');
+    if (DOM.timeClearBtn) DOM.timeClearBtn.classList.remove('hidden');
+  } else {
+    DOM.timeTriggerText.textContent = 'Select Due Time';
+    DOM.timeTriggerText.classList.add('placeholder');
+    if (DOM.timeClearBtn) DOM.timeClearBtn.classList.add('hidden');
+  }
+}
+
+function openClockDialog() {
+  if (!DOM.clockDialogOverlay) return;
+  DOM.clockDialogOverlay.classList.remove('hidden');
+  DOM.clockDialogOverlay.style.display = 'flex';
+  if (DOM.timeInputTrigger) DOM.timeInputTrigger.setAttribute('aria-expanded', 'true');
+  setTimeout(() => {
+    renderClockNumbers();
+    updateClockHand();
+    if (window.lucide) lucide.createIcons();
+  }, 30);
+}
+
+function closeClockDialog() {
+  if (!DOM.clockDialogOverlay) return;
+  DOM.clockDialogOverlay.classList.add('hidden');
+  if (DOM.timeInputTrigger) DOM.timeInputTrigger.setAttribute('aria-expanded', 'false');
+  setTimeout(() => {
+    if (DOM.clockDialogOverlay && DOM.clockDialogOverlay.classList.contains('hidden')) {
+      DOM.clockDialogOverlay.style.display = 'none';
+    }
+  }, 220);
 }
 
 function applyTimePickerValue() {
-  const hours = String(DOM.hourInput.value).padStart(2, '0');
-  const minutes = String(DOM.minuteInput.value).padStart(2, '0');
-  const timeValue = `${hours}:${minutes}`;
-  
-  DOM.formTimeStart.value = timeValue;
+  syncTimeToForm();
+  updateTimeTriggerDisplay();
+  closeClockDialog();
+  showToast(`Due time set to ${formatTimeTo12(DOM.formTimeStart.value)}`, 'success');
 }
 
 function initializeTimePicker(timeString = '') {
+  let h = 10;
+  let m = 0;
+  let period = 'AM';
+
   if (timeString) {
-    const [hours, minutes] = timeString.split(':').map(v => parseInt(v) || 0);
-    DOM.timePickerHour.value = hours;
-    DOM.timePickerMinute.value = minutes;
-    DOM.hourInput.value = String(hours).padStart(2, '0');
-    DOM.minuteInput.value = String(minutes).padStart(2, '0');
+    const parts = timeString.split(':').map(Number);
+    let rawHours = parts[0] || 0;
+    m = parts[1] || 0;
+    period = rawHours >= 12 ? 'PM' : 'AM';
+    h = rawHours % 12 || 12;
+    if (DOM.formTimeStart) DOM.formTimeStart.value = timeString;
   } else {
     const now = new Date();
-    const hours = now.getHours();
-    const minutes = now.getMinutes();
-    DOM.timePickerHour.value = hours;
-    DOM.timePickerMinute.value = minutes;
-    DOM.hourInput.value = String(hours).padStart(2, '0');
-    DOM.minuteInput.value = String(minutes).padStart(2, '0');
+    let rawHours = now.getHours();
+    m = now.getMinutes();
+    period = rawHours >= 12 ? 'PM' : 'AM';
+    h = rawHours % 12 || 12;
   }
-  updateTimePickerFromSlider();
+
+  clockPickerState.hour = h;
+  clockPickerState.minute = m;
+  clockPickerState.period = period;
+  clockPickerState.activeUnit = 'hour';
+  clockPickerState.inputMode = 'dial';
+
+  if (DOM.clockDialView) DOM.clockDialView.classList.remove('hidden');
+  if (DOM.clockKeyboardView) DOM.clockKeyboardView.classList.add('hidden');
+  if (DOM.clockModeIcon) DOM.clockModeIcon.setAttribute('data-lucide', 'keyboard');
+
+  updateClockHeaderDisplay();
+  updateTimeTriggerDisplay();
+
+  setTimeout(() => {
+    renderClockNumbers();
+    updateClockHand();
+    if (window.lucide) lucide.createIcons();
+  }, 30);
 }
 
 // Subtasks list handling in modal form
@@ -1346,7 +1611,7 @@ function addSubtaskFromInput() {
   const text = DOM.formNewSubtask.value.trim();
   if (text) {
     const newSub = {
-      id: 'sub-' + Date.now() + '-' + Math.floor(Math.random()*100),
+      id: 'sub-' + Date.now() + '-' + Math.floor(Math.random() * 100),
       text: text,
       completed: false
     };
@@ -1369,7 +1634,7 @@ function renderFormSubtasks() {
     li.style.alignItems = 'center';
     li.style.justifyContent = 'space-between';
     li.style.width = '100%';
-    
+
     const spanClass = sub.completed ? 'completed' : '';
     li.innerHTML = `
       <label style="display:flex; align-items:center; gap:8px; margin:0; flex-grow:1; cursor:pointer; min-width:0;">
@@ -1382,22 +1647,22 @@ function renderFormSubtasks() {
     `;
     li.querySelector('.subtask-form-checkbox').disabled = !canEdit;
     li.querySelector('.subtask-delete-btn').disabled = !canEdit;
-    
+
     // Checkbox toggle listener
     li.querySelector('.subtask-form-checkbox').addEventListener('change', (e) => {
       state.tempSubtasks[idx].completed = e.target.checked;
       renderFormSubtasks();
     });
-    
+
     // delete binding
     li.querySelector('.subtask-delete-btn').addEventListener('click', () => {
       state.tempSubtasks.splice(idx, 1);
       renderFormSubtasks();
     });
-    
+
     DOM.subtasksFormListContainer.appendChild(li);
   });
-  
+
   if (window.lucide) {
     window.lucide.createIcons();
   }
@@ -1406,7 +1671,7 @@ function renderFormSubtasks() {
 // Form validation
 function validateForm() {
   let isValid = true;
-  
+
   // Title field
   if (!DOM.formTitle.value.trim()) {
     DOM.formTitle.parentElement.classList.add('invalid');
@@ -1414,7 +1679,7 @@ function validateForm() {
   } else {
     DOM.formTitle.parentElement.classList.remove('invalid');
   }
-  
+
   // Date field
   if (!DOM.formDate.value) {
     DOM.formDate.parentElement.classList.add('invalid');
@@ -1422,7 +1687,7 @@ function validateForm() {
   } else {
     DOM.formDate.parentElement.classList.remove('invalid');
   }
-  
+
   return isValid;
 }
 
@@ -1449,7 +1714,7 @@ function expandRecurringEvent(eventData) {
 // Form submit action
 function handleFormSubmit(e) {
   e.preventDefault();
-  
+
   if (!validateForm()) {
     showToast("Please fix the validation errors in the form.", "error");
     return;
@@ -1465,10 +1730,10 @@ function handleFormSubmit(e) {
     DOM.formRecurrenceUntil.parentElement.classList.add('invalid');
     return;
   }
-  
+
   const isEdit = !!state.editingEventId;
   const itemType = 'task';
-  
+
   const eventData = {
     id: isEdit ? state.editingEventId : 'event-' + Date.now(),
     type: itemType,
@@ -1498,7 +1763,7 @@ function handleFormSubmit(e) {
       console.warn('Audio reminders are unavailable:', error);
     }
   }
-  
+
   eventData.subtasks = [...state.tempSubtasks];
 
   const existingEvent = isEdit ? state.events.find(ev => ev.id === state.editingEventId) : null;
@@ -1513,7 +1778,7 @@ function handleFormSubmit(e) {
     }).catch(error => showToast(error.message, 'error'));
     return;
   }
-  
+
   if (isEdit) {
     const idx = state.events.findIndex(ev => ev.id === state.editingEventId);
     state.events[idx] = eventData;
@@ -1522,10 +1787,10 @@ function handleFormSubmit(e) {
     state.events.push(...expandRecurringEvent(eventData));
     showToast("New Event scheduled successfully!", "success");
   }
-  
+
   // Set currentDate to match date of submitted event
   state.currentDate = parseLocalDate(eventData.date);
-  
+
   saveToStorage();
   closeFormModal();
   renderApp();
@@ -1546,28 +1811,28 @@ function checkAlarms() {
   const now = new Date();
   const todayStr = getLocalDateString(now);
   const nowTimeStr = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
-  
+
   state.events.forEach(ev => {
     if (ev.completed || !ev.startTime) return;
     // If event alarm is dismissed, skip checking it
     if (ev.dismissedAlarm === true) return;
     if (ev.date !== todayStr) return;
-    
+
     const reminderOffsets = ev.reminders && ev.reminders.length > 0
       ? ev.reminders.map(Number)
       : (ev.reminder === 'none' ? [] : [parseInt(ev.reminder, 10)]);
     if (reminderOffsets.length === 0) return;
-    
+
     // Parse event start time
     const [evH, evM] = ev.startTime.split(':').map(Number);
     const eventTimeToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), evH, evM, 0, 0);
-    
+
     // Check if snooze is active
     if (ev.snoozedUntil) {
       const snoozeTime = new Date(ev.snoozedUntil);
       if (now < snoozeTime) return; // Still snoozed
     }
-    
+
     reminderOffsets.forEach(reminderOffsetMinutes => {
       if ((ev.triggeredReminders || []).includes(String(reminderOffsetMinutes))) return;
       const alarmTime = new Date(eventTimeToday.getTime() - (reminderOffsetMinutes * 60 * 1000));
@@ -1581,24 +1846,24 @@ function checkAlarms() {
 function triggerAlarm(event, minutesBefore) {
   // Prevent duplicate alarm overlays
   if (state.activeAlarmEvent && state.activeAlarmEvent.id === event.id) return;
-  
+
   state.activeAlarmEvent = event;
   state.activeAlarmReminder = minutesBefore;
-  
+
   // Setup overlay
   DOM.alarmItemTitle.textContent = event.title;
   DOM.alarmItemType.textContent = event.type;
   DOM.alarmItemType.className = `alarm-item-type type-${event.type}`;
-  
+
   let labelTime = `Happening now!`;
   if (minutesBefore > 0) {
-    labelTime = `Starts in ${minutesBefore} minutes (${event.startTime})`;
+    labelTime = `Starts in ${minutesBefore} minutes (${formatTimeTo12(event.startTime)})`;
   } else if (event.type === 'task') {
-    labelTime = `Due at ${event.startTime}`;
+    labelTime = `Due at ${formatTimeTo12(event.startTime)}`;
   }
   DOM.alarmItemTime.textContent = labelTime;
-  
-  
+
+
   // Show the visual and browser alarms independently so audio restrictions cannot suppress notifications.
   DOM.alarmAlertOverlay.classList.remove('hidden');
   try {
@@ -1618,7 +1883,7 @@ function triggerAlarm(event, minutesBefore) {
 function dismissAlarm(isSnooze = false) {
   stopAlarmAudio();
   DOM.alarmAlertOverlay.classList.add('hidden');
-  
+
   if (state.activeAlarmEvent) {
     const ev = state.events.find(e => e.id === state.activeAlarmEvent.id);
     if (ev) {
@@ -1650,7 +1915,7 @@ function checkNotificationPermissionState() {
     DOM.btnToggleNotifications.style.display = 'none';
     return;
   }
-  
+
   const status = Notification.permission;
   if (status === 'granted') {
     DOM.notificationStatusDot.className = 'status-indicator success';
@@ -1681,9 +1946,9 @@ function toggleNotificationsPermission() {
     showToast("Notifications not supported in this browser.", "error");
     return;
   }
-  
+
   initAudioContext(); // user click enables audio context
-  
+
   if (Notification.permission === 'default') {
     Notification.requestPermission().then(permission => {
       checkNotificationPermissionState();
@@ -1703,7 +1968,7 @@ function toggleNotificationsPermission() {
 
 async function sendBrowserNotification(event, description) {
   if (!("Notification" in window) || Notification.permission !== "granted") return;
-  
+
   const title = `Syncra Alarm: ${event.title}`;
   const options = {
     body: description,
@@ -1718,9 +1983,9 @@ async function sendBrowserNotification(event, description) {
     await registration.showNotification(title, options);
     return;
   }
-  
+
   const notification = new Notification(title, options);
-  notification.onclick = function() {
+  notification.onclick = function () {
     window.focus();
     openFormModal(event.id);
     notification.close();
@@ -1732,7 +1997,7 @@ async function sendBrowserNotification(event, description) {
 function exportScheduleBackup() {
   const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state.events, null, 2));
   const dlAnchorElem = document.createElement('a');
-  
+
   const fileDateStr = getLocalDateString(new Date());
   dlAnchorElem.setAttribute("href", dataStr);
   dlAnchorElem.setAttribute("download", `syncra_backup_${fileDateStr}.json`);
@@ -1747,9 +2012,9 @@ function triggerImportFileSelect() {
 function handleImportFileSelect(e) {
   const file = e.target.files[0];
   if (!file) return;
-  
+
   const reader = new FileReader();
-  reader.onload = function(evt) {
+  reader.onload = function (evt) {
     try {
       const parsed = JSON.parse(evt.target.result);
       if (Array.isArray(parsed)) {
@@ -1784,24 +2049,24 @@ function handleImportFileSelect(e) {
 function showToast(message, type = 'info') {
   const toast = document.createElement('div');
   toast.className = `toast toast-${type}`;
-  
+
   const icons = {
     success: 'check-circle-2',
     error: 'alert-circle',
     info: 'info'
   };
-  
+
   toast.innerHTML = `
     <i data-lucide="${icons[type] || 'info'}"></i>
     <span>${message}</span>
   `;
-  
+
   DOM.toastContainer.appendChild(toast);
   lucide.createIcons();
-  
+
   // Animate in
   setTimeout(() => toast.classList.add('show'), 10);
-  
+
   // Animate out and remove
   setTimeout(() => {
     toast.classList.remove('show');
@@ -1814,12 +2079,12 @@ function showToast(message, type = 'info') {
 function setupEventListeners() {
   // Sidebar Quick Add
   DOM.btnAddItem.addEventListener('click', () => openFormModal());
-  
+
   // Navigation tabs (View switches)
   DOM.navItems.forEach(item => {
     item.addEventListener('click', (e) => {
       const button = e.currentTarget;
-      
+
       // Filter buttons logic vs view switches logic
       if (button.classList.contains('filter-btn')) {
         // filter clicked
@@ -1853,12 +2118,12 @@ function setupEventListeners() {
       renderApp();
     });
   });
-  
+
   const mobileBtnAdd = document.getElementById('mobile-btn-add');
   if (mobileBtnAdd) {
     mobileBtnAdd.addEventListener('click', () => openFormModal());
   }
-  
+
   const mobileBtnAgenda = document.getElementById('mobile-btn-agenda');
   if (mobileBtnAgenda) {
     mobileBtnAgenda.addEventListener('click', () => {
@@ -1868,7 +2133,7 @@ function setupEventListeners() {
       }
     });
   }
-  
+
   const mobileBtnBackup = document.getElementById('mobile-btn-backup');
   if (mobileBtnBackup) {
     mobileBtnBackup.addEventListener('click', () => {
@@ -1877,51 +2142,51 @@ function setupEventListeners() {
   }
 
   // Timeline Navigation
-  DOM.timelineTodayBtn.addEventListener('click', () => {
+  if (DOM.timelineTodayBtn) DOM.timelineTodayBtn.addEventListener('click', () => {
     state.currentDate = new Date();
     renderApp();
   });
-  DOM.timePrev.addEventListener('click', () => {
+  if (DOM.timePrev) DOM.timePrev.addEventListener('click', () => {
     state.currentDate.setDate(state.currentDate.getDate() - 1);
     renderApp();
   });
-  DOM.timeNext.addEventListener('click', () => {
+  if (DOM.timeNext) DOM.timeNext.addEventListener('click', () => {
     state.currentDate.setDate(state.currentDate.getDate() + 1);
     renderApp();
   });
 
   // Sort Agenda lists
-  DOM.sortFilterSelect.addEventListener('change', (e) => {
+  if (DOM.sortFilterSelect) DOM.sortFilterSelect.addEventListener('change', (e) => {
     state.sortFilter = e.target.value;
     renderAgendaList();
   });
-  DOM.agendaSearch.addEventListener('input', (e) => {
+  if (DOM.agendaSearch) DOM.agendaSearch.addEventListener('input', (e) => {
     state.searchQuery = e.target.value.trim();
     renderAgendaList();
   });
-  DOM.priorityFilter.addEventListener('change', (e) => {
+  if (DOM.priorityFilter) DOM.priorityFilter.addEventListener('change', (e) => {
     state.priorityFilter = e.target.value;
     renderAgendaList();
   });
-  DOM.statusFilter.addEventListener('change', (e) => {
+  if (DOM.statusFilter) DOM.statusFilter.addEventListener('change', (e) => {
     state.statusFilter = e.target.value;
     renderAgendaList();
   });
 
   // Overdue Banner Resolve Button Click
-  DOM.btnFocusOverdue.addEventListener('click', () => {
+  if (DOM.btnFocusOverdue) DOM.btnFocusOverdue.addEventListener('click', () => {
     // Find first overdue date
     const now = new Date();
     const todayStr = getLocalDateString(now);
     const currentHrMin = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
-    
+
     const overdue = state.events.find(e => {
       if (e.completed) return false;
       if (e.date < todayStr) return true;
       if (e.date === todayStr && e.startTime && e.startTime < currentHrMin) return true;
       return false;
     });
-    
+
     if (overdue) {
       state.currentDate = parseLocalDate(overdue.date);
       renderApp();
@@ -1940,26 +2205,131 @@ function setupEventListeners() {
   });
 
   // Empty state add button
-  DOM.btnEmptyAdd.addEventListener('click', () => openFormModal());
+  if (DOM.btnEmptyAdd) DOM.btnEmptyAdd.addEventListener('click', () => openFormModal());
 
   // Notification Enable
-  DOM.btnToggleNotifications.addEventListener('click', toggleNotificationsPermission);
+  if (DOM.btnToggleNotifications) DOM.btnToggleNotifications.addEventListener('click', toggleNotificationsPermission);
 
   // Form Modal actions
-  DOM.modalFormClose.addEventListener('click', closeFormModal);
-  DOM.btnCancelForm.addEventListener('click', closeFormModal);
-  
-  DOM.tabTask.addEventListener('click', () => setFormTypeTab('task'));
-  DOM.formAlarmTone.addEventListener('change', () => playAlarmChimeSequence(DOM.formAlarmTone.value));
-  DOM.btnPreviewTone.addEventListener('click', () => playAlarmChimeSequence(DOM.formAlarmTone.value));
-  
-  // Time Picker Event Listeners
-  DOM.timePickerHour.addEventListener('input', updateTimePickerFromSlider);
-  DOM.timePickerMinute.addEventListener('input', updateTimePickerFromSlider);
-  DOM.hourInput.addEventListener('input', updateTimePickerFromInput);
-  DOM.minuteInput.addEventListener('input', updateTimePickerFromInput);
-  DOM.timeSetBtn.addEventListener('click', applyTimePickerValue);
-  
+  if (DOM.modalFormClose) DOM.modalFormClose.addEventListener('click', closeFormModal);
+  if (DOM.btnCancelForm) DOM.btnCancelForm.addEventListener('click', closeFormModal);
+
+  if (DOM.tabTask) DOM.tabTask.addEventListener('click', () => setFormTypeTab('task'));
+  if (DOM.formAlarmTone) DOM.formAlarmTone.addEventListener('change', () => playAlarmChimeSequence(DOM.formAlarmTone.value));
+  if (DOM.btnPreviewTone) DOM.btnPreviewTone.addEventListener('click', () => playAlarmChimeSequence(DOM.formAlarmTone.value));
+
+  // Material Clock Picker Event Listeners
+  if (DOM.clockBtnHour) {
+    DOM.clockBtnHour.addEventListener('click', () => setClockUnit('hour'));
+  }
+  if (DOM.clockBtnMinute) {
+    DOM.clockBtnMinute.addEventListener('click', () => setClockUnit('minute'));
+  }
+  if (DOM.clockBtnAm) {
+    DOM.clockBtnAm.addEventListener('click', () => setClockPeriod('AM'));
+  }
+  if (DOM.clockBtnPm) {
+    DOM.clockBtnPm.addEventListener('click', () => setClockPeriod('PM'));
+  }
+
+  if (DOM.clockDialPlate) {
+    DOM.clockDialPlate.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      clockPickerState.isDragging = true;
+      if (DOM.clockHand) DOM.clockHand.classList.add('dragging');
+      try { DOM.clockDialPlate.setPointerCapture(e.pointerId); } catch (_) {}
+      handleDialPointerEvent(e);
+    });
+
+    DOM.clockDialPlate.addEventListener('pointermove', (e) => {
+      if (!clockPickerState.isDragging) return;
+      handleDialPointerEvent(e);
+    });
+
+    const finishDrag = (e) => {
+      if (!clockPickerState.isDragging) return;
+      clockPickerState.isDragging = false;
+      if (DOM.clockHand) DOM.clockHand.classList.remove('dragging');
+      try { DOM.clockDialPlate.releasePointerCapture(e.pointerId); } catch (_) {}
+      syncTimeToForm();
+      if (clockPickerState.activeUnit === 'hour') {
+        setTimeout(() => setClockUnit('minute'), 200);
+      }
+    };
+
+    DOM.clockDialPlate.addEventListener('pointerup', finishDrag);
+    DOM.clockDialPlate.addEventListener('pointercancel', finishDrag);
+  }
+
+  if (DOM.clockToggleModeBtn) {
+    DOM.clockToggleModeBtn.addEventListener('click', toggleClockInputMode);
+  }
+
+  if (DOM.clockManualHour) {
+    DOM.clockManualHour.addEventListener('input', () => {
+      let val = parseInt(DOM.clockManualHour.value, 10);
+      if (isNaN(val)) return;
+      val = Math.max(1, Math.min(12, val));
+      clockPickerState.hour = val;
+      updateClockHeaderDisplay();
+      syncTimeToForm();
+    });
+  }
+
+  if (DOM.clockManualMinute) {
+    DOM.clockManualMinute.addEventListener('input', () => {
+      let val = parseInt(DOM.clockManualMinute.value, 10);
+      if (isNaN(val)) return;
+      val = Math.max(0, Math.min(59, val));
+      clockPickerState.minute = val;
+      updateClockHeaderDisplay();
+      syncTimeToForm();
+    });
+  }
+
+  if (DOM.clockBtnNow) {
+    DOM.clockBtnNow.addEventListener('click', () => {
+      const now = new Date();
+      let rawH = now.getHours();
+      clockPickerState.minute = now.getMinutes();
+      clockPickerState.period = rawH >= 12 ? 'PM' : 'AM';
+      clockPickerState.hour = rawH % 12 || 12;
+      updateClockHeaderDisplay();
+      renderClockNumbers();
+      updateClockHand();
+      syncTimeToForm();
+    });
+  }
+
+  if (DOM.clockBtnSet) {
+    DOM.clockBtnSet.addEventListener('click', applyTimePickerValue);
+  }
+
+  if (DOM.clockBtnCancel) {
+    DOM.clockBtnCancel.addEventListener('click', closeClockDialog);
+  }
+
+  if (DOM.clockDialogBackdrop) {
+    DOM.clockDialogBackdrop.addEventListener('click', closeClockDialog);
+  }
+
+  if (DOM.timeInputTrigger) {
+    DOM.timeInputTrigger.addEventListener('click', (e) => {
+      e.preventDefault();
+      initializeTimePicker(DOM.formTimeStart ? DOM.formTimeStart.value : '');
+      openClockDialog();
+    });
+  }
+
+  if (DOM.timeClearBtn) {
+    DOM.timeClearBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      e.preventDefault();
+      if (DOM.formTimeStart) DOM.formTimeStart.value = '';
+      updateTimeTriggerDisplay();
+    });
+  }
+
   DOM.btnAddSubtask.addEventListener('click', addSubtaskFromInput);
   DOM.formNewSubtask.addEventListener('keypress', (e) => {
     if (e.key === 'Enter') {
@@ -1982,16 +2352,19 @@ function setupEventListeners() {
   // Alarm overlay actions
   DOM.alarmBtnDismiss.addEventListener('click', () => dismissAlarm(false));
   DOM.alarmBtnSnooze.addEventListener('click', () => dismissAlarm(true));
-  
+
   // Backup buttons
   DOM.btnExport.addEventListener('click', exportScheduleBackup);
   DOM.btnImport.addEventListener('click', triggerImportFileSelect);
   DOM.importFile.addEventListener('change', handleImportFileSelect);
-  
+
   // Close modals on clicking overlay wrapper
   window.addEventListener('click', (e) => {
     if (e.target === DOM.modalEventForm) {
       closeFormModal();
+    }
+    if (e.target === DOM.clockDialogOverlay) {
+      closeClockDialog();
     }
   });
 
@@ -2086,7 +2459,7 @@ function getLocalDateString(dateObj) {
 
 function parseLocalDate(dateStr) {
   if (!dateStr) return new Date();
-  
+
   // Clean formatting - ensure YYYY-MM-DD
   const parts = dateStr.split('-');
   if (parts.length === 3) {
@@ -2096,11 +2469,11 @@ function parseLocalDate(dateStr) {
     const date = new Date(yr, mo, dy);
     if (!isNaN(date.getTime())) return date;
   }
-  
+
   // Fallback
   const parsed = new Date(dateStr);
   if (!isNaN(parsed.getTime())) return parsed;
-  
+
   // Clean fallback to active currentDate or today
   return new Date();
 }
@@ -2172,64 +2545,64 @@ function updateAuthUI() {
 
 function syncEventsFromBackend() {
   if (!state.userToken) return;
-  
+
   fetch(`${API_BASE}/events`, {
     headers: {
       'Authorization': `Bearer ${state.userToken}`
     }
   })
-  .then(res => {
-    if (res.status === 401) {
-      // Unauthorized, token expired
-      handleLogout();
-      throw new Error('Session expired');
-    }
-    return res.json();
-  })
-  .then(data => {
-    const pending = localStorage.getItem(getScopedStorageKey('syncPending')) === 'true';
-    if (pending) {
+    .then(res => {
+      if (res.status === 401) {
+        // Unauthorized, token expired
+        handleLogout();
+        throw new Error('Session expired');
+      }
+      return res.json();
+    })
+    .then(data => {
+      const pending = localStorage.getItem(getScopedStorageKey('syncPending')) === 'true';
+      if (pending) {
+        const savedData = localStorage.getItem(getScopedStorageKey('events'));
+        if (savedData) {
+          try {
+            state.events = JSON.parse(savedData);
+          } catch (error) {
+            console.error('Failed to parse pending local schedule:', error);
+          }
+        }
+        syncEventsToBackend().then(() => {
+          if (localStorage.getItem(getScopedStorageKey('syncPending')) !== 'true') {
+            syncEventsFromBackend();
+          }
+        });
+        return;
+      }
+      const ownEvents = Array.isArray(data) ? data : [];
+      return fetch(`${API_BASE}/shared/events`, {
+        headers: { 'Authorization': `Bearer ${state.userToken}` }
+      }).then(sharedResponse => sharedResponse.ok ? sharedResponse.json() : [])
+        .then(sharedEvents => {
+          state.events = ownEvents.concat((Array.isArray(sharedEvents) ? sharedEvents : []).map(event => ({
+            ...event,
+            isShared: true
+          })));
+          localStorage.setItem(getScopedStorageKey('events'), JSON.stringify(state.events));
+          renderApp();
+        });
+    })
+    .catch(err => {
+      console.error('Failed to fetch events from backend:', err);
+      // If backend is unreachable, we fall back to local cached events
       const savedData = localStorage.getItem(getScopedStorageKey('events'));
       if (savedData) {
         try {
           state.events = JSON.parse(savedData);
-        } catch (error) {
-          console.error('Failed to parse pending local schedule:', error);
+          renderApp();
+        } catch (parseError) {
+          console.error('Failed to parse local schedule:', parseError);
         }
       }
-      syncEventsToBackend().then(() => {
-        if (localStorage.getItem(getScopedStorageKey('syncPending')) !== 'true') {
-          syncEventsFromBackend();
-        }
-      });
-      return;
-    }
-    const ownEvents = Array.isArray(data) ? data : [];
-    return fetch(`${API_BASE}/shared/events`, {
-      headers: { 'Authorization': `Bearer ${state.userToken}` }
-    }).then(sharedResponse => sharedResponse.ok ? sharedResponse.json() : [])
-      .then(sharedEvents => {
-        state.events = ownEvents.concat((Array.isArray(sharedEvents) ? sharedEvents : []).map(event => ({
-          ...event,
-          isShared: true
-        })));
-        localStorage.setItem(getScopedStorageKey('events'), JSON.stringify(state.events));
-        renderApp();
-      });
-  })
-  .catch(err => {
-    console.error('Failed to fetch events from backend:', err);
-    // If backend is unreachable, we fall back to local cached events
-    const savedData = localStorage.getItem(getScopedStorageKey('events'));
-    if (savedData) {
-      try {
-        state.events = JSON.parse(savedData);
-        renderApp();
-      } catch (parseError) {
-        console.error('Failed to parse local schedule:', parseError);
-      }
-    }
-  });
+    });
 }
 
 function syncEventsToBackend() {
@@ -2241,53 +2614,53 @@ function syncEventsToBackend() {
       deletedIds: deletedEventIds
     };
     return fetch(`${API_BASE}/events/sync`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${state.userToken}`
-    },
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${state.userToken}`
+      },
       body: JSON.stringify(payload)
     });
   })
-  .then(res => {
-    if (res.status === 401) {
-      handleLogout();
-      return;
-    }
-    if (!res.ok) throw new Error(`Sync failed with status ${res.status}`);
-    return res.json();
-  })
-  .then(data => {
-    if (data && Array.isArray(data.events)) {
-      const sharedEvents = state.events.filter(event => isSharedEvent(event));
-      state.events = data.events.concat(sharedEvents);
-      localStorage.setItem(getScopedStorageKey('events'), JSON.stringify(state.events));
-    }
-    deletedEventIds = [];
-    localStorage.setItem(getScopedStorageKey('deletedEvents'), '[]');
-    localStorage.removeItem(getScopedStorageKey('syncPending'));
-    return clearQueuedSyncPayload();
-  })
-  .catch(err => {
-    localStorage.setItem(getScopedStorageKey('syncPending'), 'true');
-    console.error('Failed to sync events to backend:', err);
-  });
+    .then(res => {
+      if (res.status === 401) {
+        handleLogout();
+        return;
+      }
+      if (!res.ok) throw new Error(`Sync failed with status ${res.status}`);
+      return res.json();
+    })
+    .then(data => {
+      if (data && Array.isArray(data.events)) {
+        const sharedEvents = state.events.filter(event => isSharedEvent(event));
+        state.events = data.events.concat(sharedEvents);
+        localStorage.setItem(getScopedStorageKey('events'), JSON.stringify(state.events));
+      }
+      deletedEventIds = [];
+      localStorage.setItem(getScopedStorageKey('deletedEvents'), '[]');
+      localStorage.removeItem(getScopedStorageKey('syncPending'));
+      return clearQueuedSyncPayload();
+    })
+    .catch(err => {
+      localStorage.setItem(getScopedStorageKey('syncPending'), 'true');
+      console.error('Failed to sync events to backend:', err);
+    });
 }
 
 function handleAuthSubmit(e) {
   e.preventDefault();
-  
+
   const email = DOM.authEmail.value.trim();
   const password = DOM.authPassword.value;
-  
+
   if (!email || !password) return;
-  
+
   const url = state.authMode === 'login' ? `${API_BASE}/auth/login` : `${API_BASE}/auth/signup`;
-  
+
   DOM.authSubmitBtn.disabled = true;
   DOM.authSubmitBtn.textContent = state.authMode === 'login' ? 'Logging in...' : 'Signing up...';
   DOM.authErrorMsg.classList.add('hidden');
-  
+
   fetch(url, {
     method: 'POST',
     headers: {
@@ -2295,39 +2668,39 @@ function handleAuthSubmit(e) {
     },
     body: JSON.stringify({ email, password })
   })
-  .then(res => {
-    if (!res.ok) {
-      return res.json().then(err => { throw new Error(err.message || 'Authentication failed'); });
-    }
-    return res.json();
-  })
-  .then(data => {
-    state.userToken = data.token;
-    state.userEmail = data.email;
-    localStorage.setItem('syncra_token', data.token);
-    localStorage.setItem('syncra_email', data.email);
-    deletedEventIds = JSON.parse(localStorage.getItem(getScopedStorageKey('deletedEvents')) || '[]');
-    
-    updateAuthUI();
-    
-    // Clear input fields
-    DOM.authEmail.value = '';
-    DOM.authPassword.value = '';
-    
-    // Load data from backend
-    syncEventsFromBackend();
-    
-    showToast(state.authMode === 'login' ? "Logged in successfully!" : "Signed up successfully!", "success");
-  })
-  .catch(err => {
-    console.error(err);
-    DOM.authErrorMsg.textContent = err.message;
-    DOM.authErrorMsg.classList.remove('hidden');
-  })
-  .finally(() => {
-    DOM.authSubmitBtn.disabled = false;
-    DOM.authSubmitBtn.textContent = state.authMode === 'login' ? 'Log In' : 'Sign Up';
-  });
+    .then(res => {
+      if (!res.ok) {
+        return res.json().then(err => { throw new Error(err.message || 'Authentication failed'); });
+      }
+      return res.json();
+    })
+    .then(data => {
+      state.userToken = data.token;
+      state.userEmail = data.email;
+      localStorage.setItem('syncra_token', data.token);
+      localStorage.setItem('syncra_email', data.email);
+      deletedEventIds = JSON.parse(localStorage.getItem(getScopedStorageKey('deletedEvents')) || '[]');
+
+      updateAuthUI();
+
+      // Clear input fields
+      DOM.authEmail.value = '';
+      DOM.authPassword.value = '';
+
+      // Load data from backend
+      syncEventsFromBackend();
+
+      showToast(state.authMode === 'login' ? "Logged in successfully!" : "Signed up successfully!", "success");
+    })
+    .catch(err => {
+      console.error(err);
+      DOM.authErrorMsg.textContent = err.message;
+      DOM.authErrorMsg.classList.remove('hidden');
+    })
+    .finally(() => {
+      DOM.authSubmitBtn.disabled = false;
+      DOM.authSubmitBtn.textContent = state.authMode === 'login' ? 'Log In' : 'Sign Up';
+    });
 }
 
 function handleLogout() {
@@ -2335,10 +2708,10 @@ function handleLogout() {
   state.userEmail = null;
   localStorage.removeItem('syncra_token');
   localStorage.removeItem('syncra_email');
-  
+
   state.events = [];
   deletedEventIds = [];
-  
+
   updateAuthUI();
   renderApp();
   showToast("Logged out successfully.", "info");
