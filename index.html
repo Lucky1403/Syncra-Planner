@@ -14,7 +14,7 @@
   <!-- Lucide Icons CDN -->
   <script src="https://unpkg.com/lucide@latest"></script>
   <!-- Main Stylesheet -->
-  <link rel="stylesheet" href="styles.css?v=13">
+  <link rel="stylesheet" href="styles.css?v=14">
   <!-- PWA Manifest & Mobile Icons -->
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#f5f1ea">
@@ -271,13 +271,6 @@
         <button class="modal-close" id="modal-form-close"><i data-lucide="x"></i></button>
       </div>
 
-      <div class="modal-tabs">
-        <button class="modal-tab active" id="tab-task" data-type="task">
-          <i data-lucide="check-square"></i>
-          <span>Task</span>
-        </button>
-      </div>
-
       <form class="event-form" id="event-creation-form" novalidate>
         <!-- Hidden Inputs for editing -->
         <input type="hidden" id="form-item-id" value="">
@@ -423,18 +416,6 @@
         <div class="form-group span-full">
           <label for="form-description">Description</label>
           <textarea id="form-description" rows="3" placeholder="Enter details or notes..."></textarea>
-        </div>
-
-        <!-- Task specific: Subtasks List -->
-        <div class="form-group span-full" id="group-subtasks">
-          <label>Subtasks Checklist</label>
-          <div class="subtask-input-row">
-            <input type="text" id="form-new-subtask" placeholder="Add a subtask..." autocomplete="off">
-            <button type="button" class="btn btn-secondary" id="btn-add-subtask">Add</button>
-          </div>
-          <ul class="subtasks-form-list" id="subtasks-form-list-container">
-            <!-- Dynamically populated list -->
-          </ul>
         </div>
 
         <div class="modal-footer span-full">
@@ -598,7 +579,7 @@
   </div>
 
   <!-- Scripts -->
-  <script src="app.js?v=12"></script>
+  <script src="app.js?v=14"></script>
 </body>
 
 </html>

@@ -1231,7 +1231,7 @@ function openFormModal(eventId = null) {
   initAudioContext(); // Enable Audio context on user click trigger
 
   DOM.eventCreationForm.reset();
-  DOM.subtasksFormListContainer.innerHTML = '';
+  if (DOM.subtasksFormListContainer) DOM.subtasksFormListContainer.innerHTML = '';
   state.editingEventId = eventId;
   state.tempSubtasks = [];
 
@@ -1333,10 +1333,10 @@ function closeFormModal() {
 
 function setFormTypeTab(type) {
   DOM.formItemType.value = 'task';
-  DOM.tabTask.classList.add('active');
-  DOM.groupPriority.style.display = 'flex';
-  DOM.groupSubtasks.style.display = 'flex';
-  DOM.labelTimeStart.textContent = "Due Time";
+  if (DOM.tabTask) DOM.tabTask.classList.add('active');
+  if (DOM.groupPriority) DOM.groupPriority.style.display = 'flex';
+  if (DOM.groupSubtasks) DOM.groupSubtasks.style.display = 'none';
+  if (DOM.labelTimeStart) DOM.labelTimeStart.textContent = "Due Time";
 }
 
 // Material Clock Time Picker State
@@ -1608,6 +1608,7 @@ function initializeTimePicker(timeString = '') {
 
 // Subtasks list handling in modal form
 function addSubtaskFromInput() {
+  if (!DOM.formNewSubtask) return;
   const text = DOM.formNewSubtask.value.trim();
   if (text) {
     const newSub = {
@@ -1622,6 +1623,7 @@ function addSubtaskFromInput() {
 }
 
 function renderFormSubtasks() {
+  if (!DOM.subtasksFormListContainer) return;
   DOM.subtasksFormListContainer.innerHTML = '';
   const editingEvent = state.editingEventId
     ? state.events.find(event => event.id === state.editingEventId)
@@ -2330,13 +2332,15 @@ function setupEventListeners() {
     });
   }
 
-  DOM.btnAddSubtask.addEventListener('click', addSubtaskFromInput);
-  DOM.formNewSubtask.addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      addSubtaskFromInput();
-    }
-  });
+  if (DOM.btnAddSubtask) DOM.btnAddSubtask.addEventListener('click', addSubtaskFromInput);
+  if (DOM.formNewSubtask) {
+    DOM.formNewSubtask.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        addSubtaskFromInput();
+      }
+    });
+  }
 
   // Modal Submit
   DOM.eventCreationForm.addEventListener('submit', handleFormSubmit);
